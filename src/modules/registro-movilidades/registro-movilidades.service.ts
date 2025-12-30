@@ -27,9 +27,10 @@ export class RegistroMovilidadesService {
     });
 
     if (dto.tiendaId) {
-      registro.tienda = await this.tiendaRepository.findOne({
+      const tienda = await this.tiendaRepository.findOne({
         where: { id: dto.tiendaId },
       });
+      registro.tienda = tienda ?? undefined;
     }
 
     return this.registroRepository.save(registro);
@@ -59,9 +60,14 @@ export class RegistroMovilidadesService {
     const registro = await this.findOne(id);
 
     if (dto.tiendaId !== undefined) {
-      registro.tienda = dto.tiendaId
-        ? await this.tiendaRepository.findOne({ where: { id: dto.tiendaId } })
-        : null;
+      if (dto.tiendaId) {
+        const tienda = await this.tiendaRepository.findOne({
+          where: { id: dto.tiendaId },
+        });
+        registro.tienda = tienda ?? undefined;
+      } else {
+        registro.tienda = undefined;
+      }
     }
 
     Object.assign(registro, {
