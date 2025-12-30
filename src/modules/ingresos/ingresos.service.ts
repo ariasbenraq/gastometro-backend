@@ -22,9 +22,10 @@ export class IngresosService {
     });
 
     if (dto.depositadoPorId) {
-      ingreso.depositadoPor = await this.personalRepository.findOne({
+      const depositadoPor = await this.personalRepository.findOne({
         where: { id: dto.depositadoPorId },
       });
+      ingreso.depositadoPor = depositadoPor ?? undefined;
     }
 
     return this.ingresosRepository.save(ingreso);
@@ -54,9 +55,14 @@ export class IngresosService {
     const ingreso = await this.findOne(id);
 
     if (dto.depositadoPorId !== undefined) {
-      ingreso.depositadoPor = dto.depositadoPorId
-        ? await this.personalRepository.findOne({ where: { id: dto.depositadoPorId } })
-        : null;
+      if (dto.depositadoPorId) {
+        const depositadoPor = await this.personalRepository.findOne({
+          where: { id: dto.depositadoPorId },
+        });
+        ingreso.depositadoPor = depositadoPor ?? undefined;
+      } else {
+        ingreso.depositadoPor = undefined;
+      }
     }
 
     Object.assign(ingreso, {

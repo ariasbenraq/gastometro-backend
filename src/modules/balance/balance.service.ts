@@ -17,20 +17,20 @@ export class BalanceService {
   ) {}
 
   async getBalance() {
-    const ingresos = await this.ingresosRepository
+    const ingresos = (await this.ingresosRepository
       .createQueryBuilder('ingresos')
       .select('COALESCE(SUM(ingresos.monto), 0)', 'total')
-      .getRawOne<{ total: string }>();
+      .getRawOne<{ total: string }>()) ?? { total: '0' };
 
-    const gastos = await this.gastosRepository
+    const gastos = (await this.gastosRepository
       .createQueryBuilder('gastos')
       .select('COALESCE(SUM(gastos.monto), 0)', 'total')
-      .getRawOne<{ total: string }>();
+      .getRawOne<{ total: string }>()) ?? { total: '0' };
 
-    const movilidades = await this.movilidadesRepository
+    const movilidades = (await this.movilidadesRepository
       .createQueryBuilder('registro_movilidades')
       .select('COALESCE(SUM(registro_movilidades.monto), 0)', 'total')
-      .getRawOne<{ total: string }>();
+      .getRawOne<{ total: string }>()) ?? { total: '0' };
 
     const totalIngresos = Number(ingresos.total || 0);
     const totalGastos = Number(gastos.total || 0);

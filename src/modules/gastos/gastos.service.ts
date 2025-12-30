@@ -24,9 +24,10 @@ export class GastosService {
     });
 
     if (dto.aprobadoPorId) {
-      gasto.aprobadoPor = await this.personalRepository.findOne({
+      const aprobadoPor = await this.personalRepository.findOne({
         where: { id: dto.aprobadoPorId },
       });
+      gasto.aprobadoPor = aprobadoPor ?? undefined;
     }
 
     return this.gastosRepository.save(gasto);
@@ -56,9 +57,14 @@ export class GastosService {
     const gasto = await this.findOne(id);
 
     if (dto.aprobadoPorId !== undefined) {
-      gasto.aprobadoPor = dto.aprobadoPorId
-        ? await this.personalRepository.findOne({ where: { id: dto.aprobadoPorId } })
-        : null;
+      if (dto.aprobadoPorId) {
+        const aprobadoPor = await this.personalRepository.findOne({
+          where: { id: dto.aprobadoPorId },
+        });
+        gasto.aprobadoPor = aprobadoPor ?? undefined;
+      } else {
+        gasto.aprobadoPor = undefined;
+      }
     }
 
     Object.assign(gasto, {
