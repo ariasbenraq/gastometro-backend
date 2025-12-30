@@ -6,7 +6,7 @@ export class EstadoServicio {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   estado: string;
 
   @OneToMany(() => TiendaIbk, (tienda) => tienda.estadoServicio)

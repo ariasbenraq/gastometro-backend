@@ -16,13 +16,13 @@ export class Usuario {
   @Column({ type: 'varchar', length: 150 })
   nombre_apellido: string;
 
-  @Column({ type: 'varchar', length: 80 })
+  @Column({ type: 'varchar', length: 80, nullable: true })
   usuario: string;
 
   @Column({ type: 'varchar', length: 150 })
   email: string;
 
-  @Column({ type: 'varchar', length: 50 })
+  @Column({ type: 'varchar', length: 50, nullable: true })
   telefono: string;
 
   @ManyToOne(() => RolesUsuario, (rol) => rol.usuarios, { nullable: true })
