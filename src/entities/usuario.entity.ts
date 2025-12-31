@@ -16,11 +16,20 @@ export class Usuario {
   @Column({ type: 'varchar', length: 150 })
   nombre_apellido: string;
 
-  @Column({ type: 'varchar', length: 80, nullable: true })
+  @Column({ type: 'varchar', length: 80, nullable: true, unique: true })
   usuario: string;
 
-  @Column({ type: 'varchar', length: 150 })
+  @Column({ type: 'varchar', length: 150, unique: true })
   email: string;
+
+  @Column({
+    type: 'varchar',
+    length: 255,
+    name: 'password_hash',
+    nullable: true,
+    select: false,
+  })
+  passwordHash?: string;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   telefono: string;

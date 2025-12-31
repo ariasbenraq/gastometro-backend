@@ -1,9 +1,21 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  UseInterceptors,
+} from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { CreateRegistroMovilidadesDto } from './dto/create-registro-movilidades.dto';
 import { UpdateRegistroMovilidadesDto } from './dto/update-registro-movilidades.dto';
 import { RegistroMovilidadesService } from './registro-movilidades.service';
 
 @Controller('registro-movilidades')
+@UseInterceptors(CacheInterceptor)
 export class RegistroMovilidadesController {
   constructor(private readonly registroService: RegistroMovilidadesService) {}
 
@@ -13,11 +25,13 @@ export class RegistroMovilidadesController {
   }
 
   @Get()
+  @CacheTTL(60)
   findAll() {
     return this.registroService.findAll();
   }
 
   @Get(':id')
+  @CacheTTL(60)
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.registroService.findOne(id);
   }

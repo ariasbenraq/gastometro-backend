@@ -1,5 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Cache } from 'cache-manager';
 import { Repository } from 'typeorm';
 import { Gasto } from '../../entities/gasto.entity';
 import { PersonalAdministrativo } from '../../entities/personal-administrativo.entity';
@@ -13,6 +15,8 @@ export class GastosService {
     private readonly gastosRepository: Repository<Gasto>,
     @InjectRepository(PersonalAdministrativo)
     private readonly personalRepository: Repository<PersonalAdministrativo>,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
   ) {}
 
   async create(dto: CreateGastoDto): Promise<Gasto> {
@@ -30,7 +34,9 @@ export class GastosService {
       gasto.aprobadoPor = aprobadoPor ?? undefined;
     }
 
-    return this.gastosRepository.save(gasto);
+    return this.gastosRepository
+      .save(gasto)
+      .finally(() => this.cacheManager.reset());
   }
 
   findAll(): Promise<Gasto[]> {
@@ -74,11 +80,14 @@ export class GastosService {
       monto: dto.monto ?? gasto.monto,
     });
 
-    return this.gastosRepository.save(gasto);
+    return this.gastosRepository
+      .save(gasto)
+      .finally(() => this.cacheManager.reset());
   }
 
   async remove(id: number): Promise<void> {
     const gasto = await this.findOne(id);
     await this.gastosRepository.remove(gasto);
+    await this.cacheManager.reset();
   }
 }
