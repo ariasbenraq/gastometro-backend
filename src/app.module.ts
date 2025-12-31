@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { CacheModule } from '@nestjs/cache-manager';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { dataSourceOptions } from './database/data-source';
@@ -15,14 +15,22 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    CacheModule.register({
+    CacheModule.registerAsync({
       isGlobal: true,
-      ttl: Number(process.env.CACHE_TTL_SECONDS ?? 60),
-      max: Number(process.env.CACHE_MAX_ITEMS ?? 500),
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        ttl: Number(configService.get('CACHE_TTL_SECONDS') ?? 60),
+        max: Number(configService.get('CACHE_MAX_ITEMS') ?? 500),
+      }),
     }),
-    ThrottlerModule.forRoot({
-      ttl: Number(process.env.THROTTLE_TTL_SECONDS ?? 60),
-      limit: Number(process.env.THROTTLE_LIMIT ?? 60),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        ttl: Number(configService.get('THROTTLE_TTL_SECONDS') ?? 60),
+        limit: Number(configService.get('THROTTLE_LIMIT') ?? 60),
+      }),
     }),
     TypeOrmModule.forRoot(dataSourceOptions),
     AuthModule,
