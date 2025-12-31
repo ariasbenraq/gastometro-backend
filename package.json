@@ -8,7 +8,10 @@
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
     "build": "nest build",
-    "lint": "echo 'No lint configured'"
+    "lint": "echo 'No lint configured'",
+    "migration:generate": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:generate src/migrations/$npm_config_name",
+    "migration:run": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:run",
+    "migration:revert": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:revert"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.9",
