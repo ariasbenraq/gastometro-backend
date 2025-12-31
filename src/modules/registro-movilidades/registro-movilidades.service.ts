@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { RegistroMovilidades } from '../../entities/registro-movilidades.entity';
 import { TiendaIbk } from '../../entities/tienda-ibk.entity';
 import { CreateRegistroMovilidadesDto } from './dto/create-registro-movilidades.dto';
+import { FilterRegistroMovilidadesDto } from './dto/filter-registro-movilidades.dto';
 import { UpdateRegistroMovilidadesDto } from './dto/update-registro-movilidades.dto';
 
 @Injectable()
@@ -42,11 +43,37 @@ export class RegistroMovilidadesService {
       .finally(() => this.cacheManager.reset());
   }
 
-  findAll(): Promise<RegistroMovilidades[]> {
-    return this.registroRepository.find({
-      relations: ['tienda'],
-      order: { fecha: 'DESC' },
-    });
+  findAll(filters?: FilterRegistroMovilidadesDto): Promise<RegistroMovilidades[]> {
+    const query = this.registroRepository
+      .createQueryBuilder('registro')
+      .leftJoinAndSelect('registro.tienda', 'tienda')
+      .orderBy('registro.fecha', 'DESC');
+
+    if (filters?.startDate && filters?.endDate) {
+      query.andWhere('registro.fecha BETWEEN :start AND :end', {
+        start: filters.startDate,
+        end: filters.endDate,
+      });
+    } else if (filters?.startDate) {
+      query.andWhere('registro.fecha >= :start', { start: filters.startDate });
+    } else if (filters?.endDate) {
+      query.andWhere('registro.fecha <= :end', { end: filters.endDate });
+    }
+
+    if (filters?.q?.trim()) {
+      const keyword = `%${filters.q.trim()}%`;
+      query.andWhere(
+        `(registro.inicio ILIKE :keyword
+          OR registro.fin ILIKE :keyword
+          OR registro.motivo ILIKE :keyword
+          OR registro.detalle ILIKE :keyword
+          OR registro.ticket ILIKE :keyword
+          OR tienda.nombre_tienda ILIKE :keyword)`,
+        { keyword },
+      );
+    }
+
+    return query.getMany();
   }
 
   async findOne(id: number): Promise<RegistroMovilidades> {

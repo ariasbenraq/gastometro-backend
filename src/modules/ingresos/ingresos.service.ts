@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Ingreso } from '../../entities/ingreso.entity';
 import { PersonalAdministrativo } from '../../entities/personal-administrativo.entity';
 import { CreateIngresoDto } from './dto/create-ingreso.dto';
+import { FilterIngresosDto } from './dto/filter-ingresos.dto';
 import { UpdateIngresoDto } from './dto/update-ingreso.dto';
 
 @Injectable()
@@ -31,11 +32,29 @@ export class IngresosService {
     return this.ingresosRepository.save(ingreso);
   }
 
-  findAll(): Promise<Ingreso[]> {
-    return this.ingresosRepository.find({
-      relations: ['depositadoPor'],
-      order: { fecha: 'DESC' },
-    });
+  findAll(filters?: FilterIngresosDto): Promise<Ingreso[]> {
+    const query = this.ingresosRepository
+      .createQueryBuilder('ingreso')
+      .leftJoinAndSelect('ingreso.depositadoPor', 'depositadoPor')
+      .orderBy('ingreso.fecha', 'DESC');
+
+    if (filters?.startDate && filters?.endDate) {
+      query.andWhere('ingreso.fecha BETWEEN :start AND :end', {
+        start: filters.startDate,
+        end: filters.endDate,
+      });
+    } else if (filters?.startDate) {
+      query.andWhere('ingreso.fecha >= :start', { start: filters.startDate });
+    } else if (filters?.endDate) {
+      query.andWhere('ingreso.fecha <= :end', { end: filters.endDate });
+    }
+
+    if (filters?.q?.trim()) {
+      const keyword = `%${filters.q.trim()}%`;
+      query.andWhere('depositadoPor.nombre ILIKE :keyword', { keyword });
+    }
+
+    return query.getMany();
   }
 
   async findOne(id: number): Promise<Ingreso> {

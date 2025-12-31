@@ -1,5 +1,16 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { CreateIngresoDto } from './dto/create-ingreso.dto';
+import { FilterIngresosDto } from './dto/filter-ingresos.dto';
 import { UpdateIngresoDto } from './dto/update-ingreso.dto';
 import { IngresosService } from './ingresos.service';
 
@@ -13,8 +24,8 @@ export class IngresosController {
   }
 
   @Get()
-  findAll() {
-    return this.ingresosService.findAll();
+  findAll(@Query() query: FilterIngresosDto) {
+    return this.ingresosService.findAll(query);
   }
 
   @Get(':id')
