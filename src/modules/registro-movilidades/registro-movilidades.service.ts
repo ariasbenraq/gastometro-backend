@@ -1,5 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Cache } from 'cache-manager';
 import { Repository } from 'typeorm';
 import { RegistroMovilidades } from '../../entities/registro-movilidades.entity';
 import { TiendaIbk } from '../../entities/tienda-ibk.entity';
@@ -13,6 +15,8 @@ export class RegistroMovilidadesService {
     private readonly registroRepository: Repository<RegistroMovilidades>,
     @InjectRepository(TiendaIbk)
     private readonly tiendaRepository: Repository<TiendaIbk>,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
   ) {}
 
   async create(dto: CreateRegistroMovilidadesDto): Promise<RegistroMovilidades> {
@@ -33,7 +37,9 @@ export class RegistroMovilidadesService {
       registro.tienda = tienda ?? undefined;
     }
 
-    return this.registroRepository.save(registro);
+    return this.registroRepository
+      .save(registro)
+      .finally(() => this.cacheManager.reset());
   }
 
   findAll(): Promise<RegistroMovilidades[]> {
@@ -80,11 +86,14 @@ export class RegistroMovilidadesService {
       ticket: dto.ticket ?? registro.ticket,
     });
 
-    return this.registroRepository.save(registro);
+    return this.registroRepository
+      .save(registro)
+      .finally(() => this.cacheManager.reset());
   }
 
   async remove(id: number): Promise<void> {
     const registro = await this.findOne(id);
     await this.registroRepository.remove(registro);
+    await this.cacheManager.reset();
   }
 }

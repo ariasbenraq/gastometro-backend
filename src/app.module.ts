@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { CacheModule } from '@nestjs/cache-manager';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -14,6 +15,11 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    CacheModule.register({
+      isGlobal: true,
+      ttl: Number(process.env.CACHE_TTL_SECONDS ?? 60),
+      max: Number(process.env.CACHE_MAX_ITEMS ?? 500),
+    }),
     ThrottlerModule.forRoot({
       ttl: Number(process.env.THROTTLE_TTL_SECONDS ?? 60),
       limit: Number(process.env.THROTTLE_LIMIT ?? 60),
