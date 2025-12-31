@@ -25,13 +25,23 @@ describe('Integration tests (HTTP + DB)', () => {
   let dataSource: DataSource;
 
   beforeAll(async () => {
+    const database = process.env.TEST_DB_NAME ?? process.env.DB_NAME ?? 'gastometro_test';
+    const host = process.env.TEST_DB_HOST ?? process.env.DB_HOST ?? 'localhost';
+    const port = Number(process.env.TEST_DB_PORT ?? process.env.DB_PORT ?? 5432);
+    const username = process.env.TEST_DB_USER ?? process.env.DB_USER ?? 'postgres';
+    const password = process.env.TEST_DB_PASSWORD ?? process.env.DB_PASSWORD ?? 'postgres';
+
     const moduleRef = await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({ isGlobal: true }),
         CacheModule.register({ isGlobal: true }),
         TypeOrmModule.forRoot({
-          type: 'sqlite',
-          database: ':memory:',
+          type: 'postgres',
+          host,
+          port,
+          username,
+          password,
+          database,
           dropSchema: true,
           synchronize: true,
           entities: [
