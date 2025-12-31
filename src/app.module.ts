@@ -11,6 +11,7 @@ import { GastosModule } from './modules/gastos/gastos.module';
 import { IngresosModule } from './modules/ingresos/ingresos.module';
 import { RegistroMovilidadesModule } from './modules/registro-movilidades/registro-movilidades.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
+import { TiendasIbkModule } from './modules/tiendas-ibk/tiendas-ibk.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     IngresosModule,
     RegistroMovilidadesModule,
     BalanceModule,
+    TiendasIbkModule,
   ],
   providers: [
     {
