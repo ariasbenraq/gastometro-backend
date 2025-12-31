@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { dataSourceOptions } from './database/data-source';
@@ -7,6 +8,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { GastosModule } from './modules/gastos/gastos.module';
 import { IngresosModule } from './modules/ingresos/ingresos.module';
 import { RegistroMovilidadesModule } from './modules/registro-movilidades/registro-movilidades.module';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -17,6 +19,12 @@ import { RegistroMovilidadesModule } from './modules/registro-movilidades/regist
     IngresosModule,
     RegistroMovilidadesModule,
     BalanceModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
   ],
 })
 export class AppModule {}
