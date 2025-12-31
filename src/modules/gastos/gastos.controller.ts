@@ -1,6 +1,5 @@
 import {
   Body,
-  CacheTTL,
   Controller,
   Delete,
   Get,
@@ -10,7 +9,7 @@ import {
   Post,
   UseInterceptors,
 } from '@nestjs/common';
-import { CacheInterceptor } from '@nestjs/cache-manager';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { CreateGastoDto } from './dto/create-gasto.dto';
 import { UpdateGastoDto } from './dto/update-gasto.dto';
 import { GastosService } from './gastos.service';

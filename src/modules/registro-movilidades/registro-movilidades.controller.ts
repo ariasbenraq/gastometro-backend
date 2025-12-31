@@ -1,6 +1,5 @@
 import {
   Body,
-  CacheTTL,
   Controller,
   Delete,
   Get,
@@ -10,7 +9,7 @@ import {
   Post,
   UseInterceptors,
 } from '@nestjs/common';
-import { CacheInterceptor } from '@nestjs/cache-manager';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { CreateRegistroMovilidadesDto } from './dto/create-registro-movilidades.dto';
 import { UpdateRegistroMovilidadesDto } from './dto/update-registro-movilidades.dto';
 import { RegistroMovilidadesService } from './registro-movilidades.service';

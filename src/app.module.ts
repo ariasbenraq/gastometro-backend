@@ -28,8 +28,12 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        ttl: Number(configService.get('THROTTLE_TTL_SECONDS') ?? 60),
-        limit: Number(configService.get('THROTTLE_LIMIT') ?? 60),
+        throttlers: [
+          {
+            ttl: Number(configService.get('THROTTLE_TTL_SECONDS') ?? 60),
+            limit: Number(configService.get('THROTTLE_LIMIT') ?? 60),
+          },
+        ],
       }),
     }),
     TypeOrmModule.forRoot(dataSourceOptions),
