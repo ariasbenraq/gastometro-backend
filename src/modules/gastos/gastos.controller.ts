@@ -1,9 +1,22 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  CacheTTL,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  UseInterceptors,
+} from '@nestjs/common';
+import { CacheInterceptor } from '@nestjs/cache-manager';
 import { CreateGastoDto } from './dto/create-gasto.dto';
 import { UpdateGastoDto } from './dto/update-gasto.dto';
 import { GastosService } from './gastos.service';
 
 @Controller('gastos')
+@UseInterceptors(CacheInterceptor)
 export class GastosController {
   constructor(private readonly gastosService: GastosService) {}
 
@@ -13,11 +26,13 @@ export class GastosController {
   }
 
   @Get()
+  @CacheTTL(60)
   findAll() {
     return this.gastosService.findAll();
   }
 
   @Get(':id')
+  @CacheTTL(60)
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.gastosService.findOne(id);
   }
