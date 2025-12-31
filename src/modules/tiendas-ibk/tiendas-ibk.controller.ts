@@ -1,5 +1,16 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { CreateTiendaIbkDto } from './dto/create-tienda-ibk.dto';
+import { FilterTiendasIbkDto } from './dto/filter-tiendas-ibk.dto';
 import { UpdateEstadoServicioDto } from './dto/update-estado-servicio.dto';
 import { UpdateTiendaIbkDto } from './dto/update-tienda-ibk.dto';
 import { TiendasIbkService } from './tiendas-ibk.service';
@@ -14,8 +25,8 @@ export class TiendasIbkController {
   }
 
   @Get()
-  findAll() {
-    return this.tiendasIbkService.findAll();
+  findAll(@Query() query: FilterTiendasIbkDto) {
+    return this.tiendasIbkService.findAll(query);
   }
 
   @Get(':id')
