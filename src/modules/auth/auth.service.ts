@@ -7,13 +7,18 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
-import { randomBytes } from 'crypto';
-import { Repository } from 'typeorm';
+import { randomBytes, randomInt } from 'crypto';
+import { IsNull, MoreThan, Repository } from 'typeorm';
+import { PasswordResetToken } from '../../entities/password-reset-token.entity';
 import { RefreshToken } from '../../entities/refresh-token.entity';
 import { Usuario } from '../../entities/usuario.entity';
+import { MailerService } from '../mailer/mailer.service';
+import { ConfirmPasswordResetDto } from './dto/confirm-password-reset.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { RequestPasswordResetDto } from './dto/request-password-reset.dto';
 import { SignInDto } from './dto/signin.dto';
 import { SignUpDto } from './dto/signup.dto';
+import { VerifyPasswordResetDto } from './dto/verify-password-reset.dto';
 
 @Injectable()
 export class AuthService {
@@ -22,8 +27,11 @@ export class AuthService {
     private readonly usuarioRepository: Repository<Usuario>,
     @InjectRepository(RefreshToken)
     private readonly refreshTokenRepository: Repository<RefreshToken>,
+    @InjectRepository(PasswordResetToken)
+    private readonly passwordResetTokenRepository: Repository<PasswordResetToken>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly mailerService: MailerService,
   ) {}
 
   async signUp(signUpDto: SignUpDto) {
@@ -135,6 +143,109 @@ export class AuthService {
     return this.issueTokens(storedToken.usuario);
   }
 
+  async requestPasswordReset(dto: RequestPasswordResetDto) {
+    const usuario = await this.usuarioRepository.findOne({
+      where: { email: dto.email },
+    });
+
+    if (!usuario) {
+      return {
+        message:
+          'Si el correo existe, se enviará un código de recuperación.',
+      };
+    }
+
+    const now = new Date();
+    await this.passwordResetTokenRepository.update(
+      {
+        usuario: { id: usuario.id },
+        usedAt: IsNull(),
+        expiresAt: MoreThan(now),
+      },
+      { usedAt: now },
+    );
+
+    const code = this.generateResetCode();
+    const tokenHash = await bcrypt.hash(
+      code,
+      Number(this.configService.get('BCRYPT_SALT_ROUNDS') ?? 10),
+    );
+
+    const ttlMinutes = Number(
+      this.configService.get('PASSWORD_RESET_CODE_TTL_MINUTES') ?? 15,
+    );
+    const expiresAt = new Date(now.getTime() + ttlMinutes * 60 * 1000);
+
+    const token = this.passwordResetTokenRepository.create({
+      usuario,
+      tokenHash,
+      expiresAt,
+    });
+
+    await this.passwordResetTokenRepository.save(token);
+    await this.mailerService.sendPasswordResetCode(usuario.email, code);
+
+    return {
+      message: 'Si el correo existe, se enviará un código de recuperación.',
+    };
+  }
+
+  async verifyPasswordReset(dto: VerifyPasswordResetDto) {
+    const token = await this.findValidResetToken(dto.email);
+
+    if (!token?.tokenHash) {
+      throw new UnauthorizedException('Código inválido o expirado.');
+    }
+
+    const isValid = await bcrypt.compare(dto.code, token.tokenHash);
+    if (!isValid) {
+      throw new UnauthorizedException('Código inválido o expirado.');
+    }
+
+    return { valid: true };
+  }
+
+  async confirmPasswordReset(dto: ConfirmPasswordResetDto) {
+    const token = await this.findValidResetToken(dto.email);
+
+    if (!token?.tokenHash) {
+      throw new UnauthorizedException('Código inválido o expirado.');
+    }
+
+    const isValid = await bcrypt.compare(dto.code, token.tokenHash);
+    if (!isValid) {
+      throw new UnauthorizedException('Código inválido o expirado.');
+    }
+
+    const usuario = await this.usuarioRepository.findOne({
+      where: { email: dto.email },
+      select: ['id', 'email', 'passwordHash'],
+    });
+
+    if (!usuario) {
+      throw new UnauthorizedException('Código inválido o expirado.');
+    }
+
+    const saltRounds = Number(this.configService.get('BCRYPT_SALT_ROUNDS') ?? 10);
+    usuario.passwordHash = await bcrypt.hash(dto.password, saltRounds);
+    await this.usuarioRepository.save(usuario);
+
+    const now = new Date();
+    token.usedAt = now;
+    await this.passwordResetTokenRepository.save(token);
+
+    await this.refreshTokenRepository.update(
+      {
+        usuario: { id: usuario.id },
+        revokedAt: IsNull(),
+        expiresAt: MoreThan(now),
+      },
+      { revokedAt: now },
+    );
+
+    return { message: 'Contraseña actualizada.' };
+  }
+
   private async issueTokens(usuario: Usuario) {
     const accessToken = this.createAccessToken(usuario);
     const refreshToken = await this.createRefreshToken(usuario);
@@ -198,5 +309,30 @@ export class AuthService {
       telefono: usuario.telefono,
       activo: usuario.activo,
     };
+  }
+
+  private generateResetCode() {
+    return String(randomInt(100000, 1000000));
+  }
+
+  private async findValidResetToken(email: string) {
+    const usuario = await this.usuarioRepository.findOne({
+      where: { email },
+      select: ['id', 'email'],
+    });
+
+    if (!usuario) {
+      return null;
+    }
+
+    const now = new Date();
+    return this.passwordResetTokenRepository
+      .createQueryBuilder('token')
+      .addSelect('token.tokenHash')
+      .where('token.usuario_id = :userId', { userId: usuario.id })
+      .andWhere('token.used_at IS NULL')
+      .andWhere('token.expires_at > :now', { now })
+      .orderBy('token.created_at', 'DESC')
+      .getOne();
   }
 }
