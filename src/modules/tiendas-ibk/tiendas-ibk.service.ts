@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { EstadoServicio } from '../../entities/estado-servicio.entity';
 import { TiendaIbk } from '../../entities/tienda-ibk.entity';
 import { CreateTiendaIbkDto } from './dto/create-tienda-ibk.dto';
+import { FilterTiendasIbkDto } from './dto/filter-tiendas-ibk.dto';
 import { UpdateEstadoServicioDto } from './dto/update-estado-servicio.dto';
 import { UpdateTiendaIbkDto } from './dto/update-tienda-ibk.dto';
 
@@ -35,11 +36,31 @@ export class TiendasIbkService {
     return this.tiendasRepository.save(tienda);
   }
 
-  findAll(): Promise<TiendaIbk[]> {
-    return this.tiendasRepository.find({
-      relations: ['estadoServicio'],
-      order: { nombre_tienda: 'ASC' },
-    });
+  findAll(filters?: FilterTiendasIbkDto): Promise<TiendaIbk[]> {
+    const query = this.tiendasRepository
+      .createQueryBuilder('tienda')
+      .leftJoinAndSelect('tienda.estadoServicio', 'estadoServicio')
+      .orderBy('tienda.nombre_tienda', 'ASC');
+
+    if (filters?.estadoServicioId) {
+      query.andWhere('estadoServicio.id = :estadoServicioId', {
+        estadoServicioId: filters.estadoServicioId,
+      });
+    }
+
+    if (filters?.q?.trim()) {
+      const keyword = `%${filters.q.trim()}%`;
+      query.andWhere(
+        `(tienda.codigo_tienda ILIKE :keyword
+          OR tienda.nombre_tienda ILIKE :keyword
+          OR tienda.distrito ILIKE :keyword
+          OR tienda.provincia ILIKE :keyword
+          OR tienda.departamento ILIKE :keyword)`,
+        { keyword },
+      );
+    }
+
+    return query.getMany();
   }
 
   async findOne(id: number): Promise<TiendaIbk> {

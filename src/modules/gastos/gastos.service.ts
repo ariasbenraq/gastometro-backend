@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { Gasto } from '../../entities/gasto.entity';
 import { PersonalAdministrativo } from '../../entities/personal-administrativo.entity';
 import { CreateGastoDto } from './dto/create-gasto.dto';
+import { FilterGastosDto } from './dto/filter-gastos.dto';
 import { UpdateGastoDto } from './dto/update-gasto.dto';
 
 @Injectable()
@@ -39,11 +40,32 @@ export class GastosService {
       .finally(() => this.cacheManager.reset());
   }
 
-  findAll(): Promise<Gasto[]> {
-    return this.gastosRepository.find({
-      relations: ['aprobadoPor'],
-      order: { fecha: 'DESC' },
-    });
+  findAll(filters?: FilterGastosDto): Promise<Gasto[]> {
+    const query = this.gastosRepository
+      .createQueryBuilder('gasto')
+      .leftJoinAndSelect('gasto.aprobadoPor', 'aprobadoPor')
+      .orderBy('gasto.fecha', 'DESC');
+
+    if (filters?.startDate && filters?.endDate) {
+      query.andWhere('gasto.fecha BETWEEN :start AND :end', {
+        start: filters.startDate,
+        end: filters.endDate,
+      });
+    } else if (filters?.startDate) {
+      query.andWhere('gasto.fecha >= :start', { start: filters.startDate });
+    } else if (filters?.endDate) {
+      query.andWhere('gasto.fecha <= :end', { end: filters.endDate });
+    }
+
+    if (filters?.q?.trim()) {
+      const keyword = `%${filters.q.trim()}%`;
+      query.andWhere(
+        '(gasto.item ILIKE :keyword OR gasto.motivo ILIKE :keyword OR aprobadoPor.nombre ILIKE :keyword)',
+        { keyword },
+      );
+    }
+
+    return query.getMany();
   }
 
   async findOne(id: number): Promise<Gasto> {
