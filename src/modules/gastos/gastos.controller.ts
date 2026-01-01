@@ -7,10 +7,12 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UseInterceptors,
 } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { CreateGastoDto } from './dto/create-gasto.dto';
+import { FilterGastosDto } from './dto/filter-gastos.dto';
 import { UpdateGastoDto } from './dto/update-gasto.dto';
 import { GastosService } from './gastos.service';
 
@@ -26,8 +28,8 @@ export class GastosController {
 
   @Get()
   @CacheTTL(60)
-  findAll() {
-    return this.gastosService.findAll();
+  findAll(@Query() query: FilterGastosDto) {
+    return this.gastosService.findAll(query);
   }
 
   @Get(':id')

@@ -3,6 +3,7 @@ import { EstadoServicio } from '../entities/estado-servicio.entity';
 import { Gasto } from '../entities/gasto.entity';
 import { Ingreso } from '../entities/ingreso.entity';
 import { PersonalAdministrativo } from '../entities/personal-administrativo.entity';
+import { PasswordResetToken } from '../entities/password-reset-token.entity';
 import { RegistroMovilidades } from '../entities/registro-movilidades.entity';
 import { RefreshToken } from '../entities/refresh-token.entity';
 import { RolesUsuario } from '../entities/roles-usuario.entity';
@@ -26,6 +27,7 @@ export const dataSourceOptions: DataSourceOptions = {
     RolesUsuario,
     Usuario,
     RefreshToken,
+    PasswordResetToken,
   ],
   migrations: [__dirname + '/../migrations/*{.ts,.js}'],
   migrationsRun: true,

@@ -7,10 +7,12 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UseInterceptors,
 } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { CreateRegistroMovilidadesDto } from './dto/create-registro-movilidades.dto';
+import { FilterRegistroMovilidadesDto } from './dto/filter-registro-movilidades.dto';
 import { UpdateRegistroMovilidadesDto } from './dto/update-registro-movilidades.dto';
 import { RegistroMovilidadesService } from './registro-movilidades.service';
 
@@ -26,8 +28,8 @@ export class RegistroMovilidadesController {
 
   @Get()
   @CacheTTL(60)
-  findAll() {
-    return this.registroService.findAll();
+  findAll(@Query() query: FilterRegistroMovilidadesDto) {
+    return this.registroService.findAll(query);
   }
 
   @Get(':id')
