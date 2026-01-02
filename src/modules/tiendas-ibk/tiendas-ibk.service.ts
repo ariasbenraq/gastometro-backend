@@ -36,7 +36,9 @@ export class TiendasIbkService {
     return this.tiendasRepository.save(tienda);
   }
 
-  findAll(filters?: FilterTiendasIbkDto): Promise<TiendaIbk[]> {
+  async findAll(
+    filters?: FilterTiendasIbkDto,
+  ): Promise<{ data: TiendaIbk[]; meta: { total: number; page: number; limit: number } }> {
     const query = this.tiendasRepository
       .createQueryBuilder('tienda')
       .leftJoinAndSelect('tienda.estadoServicio', 'estadoServicio')
@@ -60,7 +62,26 @@ export class TiendasIbkService {
       );
     }
 
-    return query.getMany();
+    const hasPagination = filters?.page !== undefined || filters?.limit !== undefined;
+    const page = filters?.page ?? 1;
+    const resolvedLimit = filters?.limit ?? 20;
+
+    if (hasPagination) {
+      query.take(resolvedLimit).skip((page - 1) * resolvedLimit);
+    }
+
+    const [data, total] = await query.getManyAndCount();
+    const limit = hasPagination ? resolvedLimit : total;
+    const resolvedPage = hasPagination ? page : 1;
+
+    return {
+      data,
+      meta: {
+        total,
+        page: resolvedPage,
+        limit,
+      },
+    };
   }
 
   async findOne(id: number): Promise<TiendaIbk> {
