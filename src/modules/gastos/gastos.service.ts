@@ -45,7 +45,16 @@ export class GastosService {
   ): Promise<{ data: Gasto[]; meta: { total: number; page: number; limit: number } }> {
     const query = this.gastosRepository
       .createQueryBuilder('gasto')
-      .leftJoinAndSelect('gasto.aprobadoPor', 'aprobadoPor')
+      .leftJoin('gasto.aprobadoPor', 'aprobadoPor')
+      .select([
+        'gasto.id',
+        'gasto.fecha',
+        'gasto.item',
+        'gasto.motivo',
+        'gasto.monto',
+        'aprobadoPor.id',
+        'aprobadoPor.nombre',
+      ])
       .orderBy('gasto.fecha', 'DESC');
 
     if (filters?.startDate && filters?.endDate) {

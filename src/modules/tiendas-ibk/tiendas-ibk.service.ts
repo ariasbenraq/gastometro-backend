@@ -47,7 +47,17 @@ export class TiendasIbkService {
   ): Promise<{ data: TiendaIbk[]; meta: { total: number; page: number; limit: number } }> {
     const query = this.tiendasRepository
       .createQueryBuilder('tienda')
-      .leftJoinAndSelect('tienda.estadoServicio', 'estadoServicio')
+      .leftJoin('tienda.estadoServicio', 'estadoServicio')
+      .select([
+        'tienda.id',
+        'tienda.codigo_tienda',
+        'tienda.nombre_tienda',
+        'tienda.distrito',
+        'tienda.provincia',
+        'tienda.departamento',
+        'estadoServicio.id',
+        'estadoServicio.estado',
+      ])
       .orderBy('tienda.nombre_tienda', 'ASC');
 
     if (filters?.estadoServicioId) {
