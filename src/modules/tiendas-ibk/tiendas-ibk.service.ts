@@ -1,5 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Cache } from 'cache-manager';
 import { Repository } from 'typeorm';
 import { EstadoServicio } from '../../entities/estado-servicio.entity';
 import { TiendaIbk } from '../../entities/tienda-ibk.entity';
@@ -15,6 +17,8 @@ export class TiendasIbkService {
     private readonly tiendasRepository: Repository<TiendaIbk>,
     @InjectRepository(EstadoServicio)
     private readonly estadoServicioRepository: Repository<EstadoServicio>,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
   ) {}
 
   async create(dto: CreateTiendaIbkDto): Promise<TiendaIbk> {
@@ -33,7 +37,9 @@ export class TiendasIbkService {
       tienda.estadoServicio = estadoServicio ?? undefined;
     }
 
-    return this.tiendasRepository.save(tienda);
+    return this.tiendasRepository
+      .save(tienda)
+      .finally(() => this.cacheManager.reset());
   }
 
   async findAll(
@@ -119,7 +125,9 @@ export class TiendasIbkService {
       departamento: dto.departamento ?? tienda.departamento,
     });
 
-    return this.tiendasRepository.save(tienda);
+    return this.tiendasRepository
+      .save(tienda)
+      .finally(() => this.cacheManager.reset());
   }
 
   async updateEstadoServicio(
@@ -137,11 +145,14 @@ export class TiendasIbkService {
       tienda.estadoServicio = undefined;
     }
 
-    return this.tiendasRepository.save(tienda);
+    return this.tiendasRepository
+      .save(tienda)
+      .finally(() => this.cacheManager.reset());
   }
 
   async remove(id: number): Promise<void> {
     const tienda = await this.findOne(id);
     await this.tiendasRepository.remove(tienda);
+    await this.cacheManager.reset();
   }
 }

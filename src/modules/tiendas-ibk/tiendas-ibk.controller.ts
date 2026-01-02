@@ -8,7 +8,9 @@ import {
   Patch,
   Post,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { CreateTiendaIbkDto } from './dto/create-tienda-ibk.dto';
 import { FilterTiendasIbkDto } from './dto/filter-tiendas-ibk.dto';
 import { UpdateEstadoServicioDto } from './dto/update-estado-servicio.dto';
@@ -16,6 +18,7 @@ import { UpdateTiendaIbkDto } from './dto/update-tienda-ibk.dto';
 import { TiendasIbkService } from './tiendas-ibk.service';
 
 @Controller('tiendas-ibk')
+@UseInterceptors(CacheInterceptor)
 export class TiendasIbkController {
   constructor(private readonly tiendasIbkService: TiendasIbkService) {}
 
@@ -25,11 +28,13 @@ export class TiendasIbkController {
   }
 
   @Get()
+  @CacheTTL(60)
   findAll(@Query() query: FilterTiendasIbkDto) {
     return this.tiendasIbkService.findAll(query);
   }
 
   @Get(':id')
+  @CacheTTL(60)
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.tiendasIbkService.findOne(id);
   }
