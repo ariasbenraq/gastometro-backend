@@ -17,6 +17,13 @@ export const dataSourceOptions: DataSourceOptions = {
   username: process.env.DB_USER ?? 'gastometro',
   password: process.env.DB_PASSWORD ?? 'gastometro',
   database: process.env.DB_NAME ?? 'gastometro',
+  extra: {
+    max: Number(process.env.DB_POOL_MAX ?? 10),
+    idleTimeoutMillis: Number(process.env.DB_POOL_IDLE_TIMEOUT_MS ?? 30000),
+    connectionTimeoutMillis: Number(
+      process.env.DB_POOL_CONN_TIMEOUT_MS ?? 2000,
+    ),
+  },
   entities: [
     Gasto,
     Ingreso,
