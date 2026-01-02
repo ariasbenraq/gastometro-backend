@@ -1,6 +1,14 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Gasto } from './gasto.entity';
 import { Ingreso } from './ingreso.entity';
+import { Usuario } from './usuario.entity';
 
 @Entity({ name: 'personal_administrativo' })
 export class PersonalAdministrativo {
@@ -12,6 +20,10 @@ export class PersonalAdministrativo {
 
   @Column({ type: 'boolean', default: true })
   activo: boolean;
+
+  @ManyToOne(() => Usuario, { nullable: false })
+  @JoinColumn({ name: 'usuario_id' })
+  usuario: Usuario;
 
   @OneToMany(() => Gasto, (gasto) => gasto.aprobadoPor)
   gastos: Gasto[];
