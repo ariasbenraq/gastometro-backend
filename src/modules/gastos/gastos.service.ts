@@ -43,7 +43,16 @@ export class GastosService {
   findAll(filters?: FilterGastosDto): Promise<Gasto[]> {
     const query = this.gastosRepository
       .createQueryBuilder('gasto')
-      .leftJoinAndSelect('gasto.aprobadoPor', 'aprobadoPor')
+      .leftJoin('gasto.aprobadoPor', 'aprobadoPor')
+      .select([
+        'gasto.id',
+        'gasto.fecha',
+        'gasto.item',
+        'gasto.motivo',
+        'gasto.monto',
+        'aprobadoPor.id',
+        'aprobadoPor.nombre',
+      ])
       .orderBy('gasto.fecha', 'DESC');
 
     if (filters?.startDate && filters?.endDate) {

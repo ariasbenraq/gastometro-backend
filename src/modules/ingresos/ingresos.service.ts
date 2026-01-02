@@ -35,7 +35,14 @@ export class IngresosService {
   findAll(filters?: FilterIngresosDto): Promise<Ingreso[]> {
     const query = this.ingresosRepository
       .createQueryBuilder('ingreso')
-      .leftJoinAndSelect('ingreso.depositadoPor', 'depositadoPor')
+      .leftJoin('ingreso.depositadoPor', 'depositadoPor')
+      .select([
+        'ingreso.id',
+        'ingreso.fecha',
+        'ingreso.monto',
+        'depositadoPor.id',
+        'depositadoPor.nombre',
+      ])
       .orderBy('ingreso.fecha', 'DESC');
 
     if (filters?.startDate && filters?.endDate) {

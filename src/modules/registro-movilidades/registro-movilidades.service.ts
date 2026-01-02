@@ -46,7 +46,20 @@ export class RegistroMovilidadesService {
   findAll(filters?: FilterRegistroMovilidadesDto): Promise<RegistroMovilidades[]> {
     const query = this.registroRepository
       .createQueryBuilder('registro')
-      .leftJoinAndSelect('registro.tienda', 'tienda')
+      .leftJoin('registro.tienda', 'tienda')
+      .select([
+        'registro.id',
+        'registro.fecha',
+        'registro.inicio',
+        'registro.fin',
+        'registro.motivo',
+        'registro.detalle',
+        'registro.monto',
+        'registro.ticket',
+        'tienda.id',
+        'tienda.codigo_tienda',
+        'tienda.nombre_tienda',
+      ])
       .orderBy('registro.fecha', 'DESC');
 
     if (filters?.startDate && filters?.endDate) {
