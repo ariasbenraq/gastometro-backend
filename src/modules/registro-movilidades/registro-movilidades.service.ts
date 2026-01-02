@@ -43,7 +43,12 @@ export class RegistroMovilidadesService {
       .finally(() => this.cacheManager.reset());
   }
 
-  findAll(filters?: FilterRegistroMovilidadesDto): Promise<RegistroMovilidades[]> {
+  async findAll(
+    filters?: FilterRegistroMovilidadesDto,
+  ): Promise<{
+    data: RegistroMovilidades[];
+    meta: { total: number; page: number; limit: number };
+  }> {
     const query = this.registroRepository
       .createQueryBuilder('registro')
       .leftJoinAndSelect('registro.tienda', 'tienda')
@@ -73,7 +78,26 @@ export class RegistroMovilidadesService {
       );
     }
 
-    return query.getMany();
+    const hasPagination = filters?.page !== undefined || filters?.limit !== undefined;
+    const page = filters?.page ?? 1;
+    const resolvedLimit = filters?.limit ?? 20;
+
+    if (hasPagination) {
+      query.take(resolvedLimit).skip((page - 1) * resolvedLimit);
+    }
+
+    const [data, total] = await query.getManyAndCount();
+    const limit = hasPagination ? resolvedLimit : total;
+    const resolvedPage = hasPagination ? page : 1;
+
+    return {
+      data,
+      meta: {
+        total,
+        page: resolvedPage,
+        limit,
+      },
+    };
   }
 
   async findOne(id: number): Promise<RegistroMovilidades> {

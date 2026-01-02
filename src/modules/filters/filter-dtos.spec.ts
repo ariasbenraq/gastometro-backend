@@ -19,9 +19,13 @@ describe('Filter DTO validation', () => {
     const instance = plainToInstance(FilterIngresosDto, {
       startDate: '2024-02-29',
       endDate: '2024-02-29',
+      page: '2',
+      limit: '15',
     });
     const errors = await validate(instance);
     expect(errors).toHaveLength(0);
+    expect(instance.page).toBe(2);
+    expect(instance.limit).toBe(15);
   });
 
   it('rejects invalid dates for registro movilidades filters', async () => {
@@ -36,9 +40,13 @@ describe('Filter DTO validation', () => {
     const instance = plainToInstance(FilterTiendasIbkDto, {
       estadoServicioId: '2',
       q: 'Miraflores',
+      page: '1',
+      limit: '25',
     });
     const errors = await validate(instance);
     expect(errors).toHaveLength(0);
     expect(instance.estadoServicioId).toBe(2);
+    expect(instance.page).toBe(1);
+    expect(instance.limit).toBe(25);
   });
 });
