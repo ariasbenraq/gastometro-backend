@@ -1,5 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Cache } from 'cache-manager';
 import { Repository } from 'typeorm';
 import { EstadoServicio } from '../../entities/estado-servicio.entity';
 import { TiendaIbk } from '../../entities/tienda-ibk.entity';
@@ -15,6 +17,8 @@ export class TiendasIbkService {
     private readonly tiendasRepository: Repository<TiendaIbk>,
     @InjectRepository(EstadoServicio)
     private readonly estadoServicioRepository: Repository<EstadoServicio>,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
   ) {}
 
   async create(dto: CreateTiendaIbkDto): Promise<TiendaIbk> {
@@ -33,13 +37,27 @@ export class TiendasIbkService {
       tienda.estadoServicio = estadoServicio ?? undefined;
     }
 
-    return this.tiendasRepository.save(tienda);
+    return this.tiendasRepository
+      .save(tienda)
+      .finally(() => this.cacheManager.reset());
   }
 
-  findAll(filters?: FilterTiendasIbkDto): Promise<TiendaIbk[]> {
+  async findAll(
+    filters?: FilterTiendasIbkDto,
+  ): Promise<{ data: TiendaIbk[]; meta: { total: number; page: number; limit: number } }> {
     const query = this.tiendasRepository
       .createQueryBuilder('tienda')
-      .leftJoinAndSelect('tienda.estadoServicio', 'estadoServicio')
+      .leftJoin('tienda.estadoServicio', 'estadoServicio')
+      .select([
+        'tienda.id',
+        'tienda.codigo_tienda',
+        'tienda.nombre_tienda',
+        'tienda.distrito',
+        'tienda.provincia',
+        'tienda.departamento',
+        'estadoServicio.id',
+        'estadoServicio.estado',
+      ])
       .orderBy('tienda.nombre_tienda', 'ASC');
 
     if (filters?.estadoServicioId) {
@@ -60,7 +78,26 @@ export class TiendasIbkService {
       );
     }
 
-    return query.getMany();
+    const hasPagination = filters?.page !== undefined || filters?.limit !== undefined;
+    const page = filters?.page ?? 1;
+    const resolvedLimit = filters?.limit ?? 20;
+
+    if (hasPagination) {
+      query.take(resolvedLimit).skip((page - 1) * resolvedLimit);
+    }
+
+    const [data, total] = await query.getManyAndCount();
+    const limit = hasPagination ? resolvedLimit : total;
+    const resolvedPage = hasPagination ? page : 1;
+
+    return {
+      data,
+      meta: {
+        total,
+        page: resolvedPage,
+        limit,
+      },
+    };
   }
 
   async findOne(id: number): Promise<TiendaIbk> {
@@ -98,7 +135,9 @@ export class TiendasIbkService {
       departamento: dto.departamento ?? tienda.departamento,
     });
 
-    return this.tiendasRepository.save(tienda);
+    return this.tiendasRepository
+      .save(tienda)
+      .finally(() => this.cacheManager.reset());
   }
 
   async updateEstadoServicio(
@@ -116,11 +155,14 @@ export class TiendasIbkService {
       tienda.estadoServicio = undefined;
     }
 
-    return this.tiendasRepository.save(tienda);
+    return this.tiendasRepository
+      .save(tienda)
+      .finally(() => this.cacheManager.reset());
   }
 
   async remove(id: number): Promise<void> {
     const tienda = await this.findOne(id);
     await this.tiendasRepository.remove(tienda);
+    await this.cacheManager.reset();
   }
 }

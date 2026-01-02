@@ -1,5 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Cache } from 'cache-manager';
 import { Repository } from 'typeorm';
 import { Ingreso } from '../../entities/ingreso.entity';
 import { PersonalAdministrativo } from '../../entities/personal-administrativo.entity';
@@ -14,6 +16,8 @@ export class IngresosService {
     private readonly ingresosRepository: Repository<Ingreso>,
     @InjectRepository(PersonalAdministrativo)
     private readonly personalRepository: Repository<PersonalAdministrativo>,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
   ) {}
 
   async create(dto: CreateIngresoDto): Promise<Ingreso> {
@@ -29,13 +33,27 @@ export class IngresosService {
       ingreso.depositadoPor = depositadoPor ?? undefined;
     }
 
-    return this.ingresosRepository.save(ingreso);
+    return this.ingresosRepository
+      .save(ingreso)
+      .finally(() => this.cacheManager.reset());
   }
 
-  findAll(filters?: FilterIngresosDto): Promise<Ingreso[]> {
+  async findAll(
+    filters?: FilterIngresosDto,
+  ): Promise<{
+    data: Ingreso[];
+    meta: { total: number; page: number; limit: number };
+  }> {
     const query = this.ingresosRepository
       .createQueryBuilder('ingreso')
-      .leftJoinAndSelect('ingreso.depositadoPor', 'depositadoPor')
+      .leftJoin('ingreso.depositadoPor', 'depositadoPor')
+      .select([
+        'ingreso.id',
+        'ingreso.fecha',
+        'ingreso.monto',
+        'depositadoPor.id',
+        'depositadoPor.nombre',
+      ])
       .orderBy('ingreso.fecha', 'DESC');
 
     if (filters?.startDate && filters?.endDate) {
@@ -54,7 +72,26 @@ export class IngresosService {
       query.andWhere('depositadoPor.nombre ILIKE :keyword', { keyword });
     }
 
-    return query.getMany();
+    const hasPagination = filters?.page !== undefined || filters?.limit !== undefined;
+    const page = filters?.page ?? 1;
+    const resolvedLimit = filters?.limit ?? 20;
+
+    if (hasPagination) {
+      query.take(resolvedLimit).skip((page - 1) * resolvedLimit);
+    }
+
+    const [data, total] = await query.getManyAndCount();
+    const limit = hasPagination ? resolvedLimit : total;
+    const resolvedPage = hasPagination ? page : 1;
+
+    return {
+      data,
+      meta: {
+        total,
+        page: resolvedPage,
+        limit,
+      },
+    };
   }
 
   async findOne(id: number): Promise<Ingreso> {
@@ -89,11 +126,14 @@ export class IngresosService {
       monto: dto.monto ?? ingreso.monto,
     });
 
-    return this.ingresosRepository.save(ingreso);
+    return this.ingresosRepository
+      .save(ingreso)
+      .finally(() => this.cacheManager.reset());
   }
 
   async remove(id: number): Promise<void> {
     const ingreso = await this.findOne(id);
     await this.ingresosRepository.remove(ingreso);
+    await this.cacheManager.reset();
   }
 }
