@@ -1,5 +1,6 @@
 import {
   IsEmail,
+  IsEnum,
   IsOptional,
   IsString,
   IsStrongPassword,
@@ -7,6 +8,12 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+
+export enum UserRole {
+  ADMIN = 'ADMIN',
+  USER = 'USER',
+  ANALYST_BALANCE = 'ANALYST_BALANCE',
+}
 
 export class SignUpDto {
   @IsString()
@@ -45,4 +52,8 @@ export class SignUpDto {
     },
   )
   password: string;
+
+  @IsOptional()
+  @IsEnum(UserRole, { message: 'Rol inválido.' })
+  rol?: UserRole;
 }
