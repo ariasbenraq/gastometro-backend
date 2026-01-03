@@ -26,6 +26,9 @@ export class TiendaIbk {
   @Column({ type: 'varchar', length: 100 })
   departamento: string;
 
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  direccion?: string;
+
   @OneToMany(() => RegistroMovilidades, (registro) => registro.tienda)
   registrosMovilidades: RegistroMovilidades[];
 }
