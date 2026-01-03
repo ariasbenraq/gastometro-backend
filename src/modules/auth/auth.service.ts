@@ -1,5 +1,7 @@
 import {
+  BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -11,13 +13,14 @@ import { randomBytes, randomInt } from 'crypto';
 import { IsNull, MoreThan, Repository } from 'typeorm';
 import { PasswordResetToken } from '../../entities/password-reset-token.entity';
 import { RefreshToken } from '../../entities/refresh-token.entity';
+import { RolesUsuario } from '../../entities/roles-usuario.entity';
 import { Usuario } from '../../entities/usuario.entity';
 import { MailerService } from '../mailer/mailer.service';
 import { ConfirmPasswordResetDto } from './dto/confirm-password-reset.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RequestPasswordResetDto } from './dto/request-password-reset.dto';
 import { SignInDto } from './dto/signin.dto';
-import { SignUpDto } from './dto/signup.dto';
+import { SignUpDto, UserRole } from './dto/signup.dto';
 import { VerifyPasswordResetDto } from './dto/verify-password-reset.dto';
 
 @Injectable()
@@ -25,6 +28,8 @@ export class AuthService {
   constructor(
     @InjectRepository(Usuario)
     private readonly usuarioRepository: Repository<Usuario>,
+    @InjectRepository(RolesUsuario)
+    private readonly rolesUsuarioRepository: Repository<RolesUsuario>,
     @InjectRepository(RefreshToken)
     private readonly refreshTokenRepository: Repository<RefreshToken>,
     @InjectRepository(PasswordResetToken)
@@ -47,6 +52,20 @@ export class AuthService {
       throw new ConflictException('El email ya existe.');
     }
 
+    const requestedRole = signUpDto.rol ?? UserRole.USER;
+
+    if (requestedRole === UserRole.ADMIN) {
+      throw new ForbiddenException('No está permitido registrarse como ADMIN.');
+    }
+
+    const rol = await this.rolesUsuarioRepository.findOne({
+      where: { nombre: requestedRole },
+    });
+
+    if (!rol) {
+      throw new BadRequestException('Rol inválido.');
+    }
+
     const saltRounds = Number(this.configService.get('BCRYPT_SALT_ROUNDS') ?? 10);
     const passwordHash = await bcrypt.hash(signUpDto.password, saltRounds);
 
@@ -56,7 +75,8 @@ export class AuthService {
       email: signUpDto.email,
       telefono: signUpDto.telefono,
       passwordHash,
-      activo: true,
+      activo: requestedRole !== UserRole.ANALYST_BALANCE,
+      rol,
     });
 
     const savedUser = await this.usuarioRepository.save(usuario);
@@ -247,18 +267,23 @@ export class AuthService {
   }
 
   private async issueTokens(usuario: Usuario) {
-    const accessToken = this.createAccessToken(usuario);
-    const refreshToken = await this.createRefreshToken(usuario);
+    const usuarioConRol = await this.ensureRolLoaded(usuario);
+    const accessToken = this.createAccessToken(usuarioConRol);
+    const refreshToken = await this.createRefreshToken(usuarioConRol);
 
     return {
       accessToken,
       refreshToken,
-      user: this.sanitizeUser(usuario),
+      user: this.sanitizeUser(usuarioConRol),
     };
   }
 
   private createAccessToken(usuario: Usuario) {
-    const payload = { sub: usuario.id, usuario: usuario.usuario };
+    const payload = {
+      sub: usuario.id,
+      usuario: usuario.usuario,
+      rol: usuario.rol?.nombre ?? usuario.rol?.id ?? null,
+    };
     return this.jwtService.sign(payload);
   }
 
@@ -308,7 +333,21 @@ export class AuthService {
       email: usuario.email,
       telefono: usuario.telefono,
       activo: usuario.activo,
+      rol: usuario.rol?.nombre ?? usuario.rol?.id ?? null,
     };
+  }
+
+  private async ensureRolLoaded(usuario: Usuario) {
+    if (usuario.rol || !usuario.id) {
+      return usuario;
+    }
+
+    const usuarioConRol = await this.usuarioRepository.findOne({
+      where: { id: usuario.id },
+      relations: ['rol'],
+    });
+
+    return usuarioConRol ?? usuario;
   }
 
   private generateResetCode() {
