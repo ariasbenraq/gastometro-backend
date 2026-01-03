@@ -73,23 +73,35 @@ export class RegistroMovilidadesService {
         'tienda.codigo_tienda',
         'tienda.nombre_tienda',
       ])
-      .where('registro.usuario_id = :userId', { userId })
       .orderBy('registro.fecha', 'DESC');
+    let hasWhere = false;
+
+    if (userId) {
+      query.where('registro.usuario_id = :userId', { userId });
+      hasWhere = true;
+    }
 
     if (filters?.startDate && filters?.endDate) {
-      query.andWhere('registro.fecha BETWEEN :start AND :end', {
+      const method = hasWhere ? 'andWhere' : 'where';
+      query[method]('registro.fecha BETWEEN :start AND :end', {
         start: filters.startDate,
         end: filters.endDate,
       });
+      hasWhere = true;
     } else if (filters?.startDate) {
-      query.andWhere('registro.fecha >= :start', { start: filters.startDate });
+      const method = hasWhere ? 'andWhere' : 'where';
+      query[method]('registro.fecha >= :start', { start: filters.startDate });
+      hasWhere = true;
     } else if (filters?.endDate) {
-      query.andWhere('registro.fecha <= :end', { end: filters.endDate });
+      const method = hasWhere ? 'andWhere' : 'where';
+      query[method]('registro.fecha <= :end', { end: filters.endDate });
+      hasWhere = true;
     }
 
     if (filters?.q?.trim()) {
       const keyword = `%${filters.q.trim()}%`;
-      query.andWhere(
+      const method = hasWhere ? 'andWhere' : 'where';
+      query[method](
         `(registro.inicio ILIKE :keyword
           OR registro.fin ILIKE :keyword
           OR registro.motivo ILIKE :keyword
@@ -98,6 +110,7 @@ export class RegistroMovilidadesService {
           OR tienda.nombre_tienda ILIKE :keyword)`,
         { keyword },
       );
+      hasWhere = true;
     }
 
     const hasPagination = filters?.page !== undefined || filters?.limit !== undefined;
@@ -123,8 +136,11 @@ export class RegistroMovilidadesService {
   }
 
   async findOne(id: number, userId?: number): Promise<RegistroMovilidades> {
+    const whereClause = userId
+      ? { id, usuario: { id: userId } }
+      : { id };
     const registro = await this.registroRepository.findOne({
-      where: { id, usuario: { id: userId } },
+      where: whereClause,
       relations: ['tienda'],
     });
 
