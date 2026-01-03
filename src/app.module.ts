@@ -12,6 +12,7 @@ import { GastosModule } from './modules/gastos/gastos.module';
 import { IngresosModule } from './modules/ingresos/ingresos.module';
 import { RegistroMovilidadesModule } from './modules/registro-movilidades/registro-movilidades.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
+import { RolesGuard } from './modules/auth/guards/roles.guard';
 import { TiendasIbkModule } from './modules/tiendas-ibk/tiendas-ibk.module';
 import { HealthModule } from './health/health.module';
 
@@ -69,6 +70,10 @@ const validationSchema = Joi.object({
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
     {
       provide: APP_GUARD,
