@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { TiendaIbk } from './tienda-ibk.entity';
+import { Usuario } from './usuario.entity';
 
 @Entity({ name: 'registro_movilidades' })
 export class RegistroMovilidades {
@@ -30,6 +31,10 @@ export class RegistroMovilidades {
 
   @Column({ type: 'numeric', precision: 12, scale: 2 })
   monto: number;
+
+  @ManyToOne(() => Usuario, { nullable: false })
+  @JoinColumn({ name: 'usuario_id' })
+  usuario: Usuario;
 
   @ManyToOne(() => TiendaIbk, (tienda) => tienda.registrosMovilidades, {
     nullable: true,

@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { PersonalAdministrativo } from './personal-administrativo.entity';
+import { Usuario } from './usuario.entity';
 
 @Entity({ name: 'ingresos' })
 export class Ingreso {
@@ -18,6 +19,10 @@ export class Ingreso {
 
   @Column({ type: 'numeric', precision: 12, scale: 2 })
   monto: number;
+
+  @ManyToOne(() => Usuario, { nullable: false })
+  @JoinColumn({ name: 'usuario_id' })
+  usuario: Usuario;
 
   @ManyToOne(() => PersonalAdministrativo, (personal) => personal.ingresos, {
     nullable: true,
