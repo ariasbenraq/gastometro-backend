@@ -32,7 +32,7 @@ export class SeedAdminRoleUser1723000000000 implements MigrationInterface {
         true,
         now(),
         (SELECT "id" FROM "roles_usuario" WHERE "nombre" = 'ADMIN' LIMIT 1),
-        '$2a$10$Qqyt2qkNWICOZiGkkuHigu5Ormhowek70Fah7H3Ac6MANhrZT8O6W'
+        '$2a$10$hut8VsoG3msfop/oOgzvcesHVErY0nnS9SFlfhHchSkRFfLTwRLMy'
       WHERE NOT EXISTS (
         SELECT 1 FROM "usuarios"
         WHERE "usuario" = 'admin' OR "email" = 'admin@gastometro.local'
