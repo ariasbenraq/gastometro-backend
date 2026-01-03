@@ -3,10 +3,14 @@ import {
   Get,
   ParseIntPipe,
   Query,
+  Req,
   UseInterceptors,
 } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
+import { Request } from 'express';
 import { BalanceService } from './balance.service';
+
+type AuthenticatedRequest = Request & { user?: { userId?: number } };
 
 @Controller('balance')
 @UseInterceptors(CacheInterceptor)
@@ -15,8 +19,9 @@ export class BalanceController {
 
   @Get()
   @CacheTTL(30)
-  getBalance() {
-    return this.balanceService.getBalance();
+  getBalance(@Req() req: AuthenticatedRequest) {
+    const userId = req.user?.userId;
+    return this.balanceService.getBalance(userId);
   }
 
   @Get('mensual')
@@ -24,13 +29,19 @@ export class BalanceController {
   getMonthlyBalance(
     @Query('year', ParseIntPipe) year: number,
     @Query('month', ParseIntPipe) month: number,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.balanceService.getMonthlyBalance(year, month);
+    const userId = req.user?.userId;
+    return this.balanceService.getMonthlyBalance(year, month, userId);
   }
 
   @Get('anual')
   @CacheTTL(30)
-  getAnnualBalance(@Query('year', ParseIntPipe) year: number) {
-    return this.balanceService.getAnnualBalance(year);
+  getAnnualBalance(
+    @Query('year', ParseIntPipe) year: number,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const userId = req.user?.userId;
+    return this.balanceService.getAnnualBalance(year, userId);
   }
 }
