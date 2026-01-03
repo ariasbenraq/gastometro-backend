@@ -4,6 +4,7 @@ import { Request } from 'express';
 export interface AuthenticatedUser {
   userId: number;
   usuario: string;
+  rol?: string | number | null;
 }
 
 export const CurrentUser = createParamDecorator(
