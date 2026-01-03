@@ -35,6 +35,10 @@ export class AuthService {
   ) {}
 
   async signUp(signUpDto: SignUpDto) {
+    if (signUpDto.usuario.toLowerCase() === 'admin') {
+      throw new ConflictException('El usuario ya existe.');
+    }
+
     const existingUser = await this.usuarioRepository.findOne({
       where: [{ usuario: signUpDto.usuario }, { email: signUpDto.email }],
     });
