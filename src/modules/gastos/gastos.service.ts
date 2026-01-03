@@ -5,6 +5,7 @@ import { Cache } from 'cache-manager';
 import { Repository } from 'typeorm';
 import { Gasto } from '../../entities/gasto.entity';
 import { PersonalAdministrativo } from '../../entities/personal-administrativo.entity';
+import { Usuario } from '../../entities/usuario.entity';
 import { CreateGastoDto } from './dto/create-gasto.dto';
 import { FilterGastosDto } from './dto/filter-gastos.dto';
 import { UpdateGastoDto } from './dto/update-gasto.dto';
@@ -20,13 +21,17 @@ export class GastosService {
     private readonly cacheManager: Cache,
   ) {}
 
-  async create(dto: CreateGastoDto): Promise<Gasto> {
+  async create(dto: CreateGastoDto, userId?: number): Promise<Gasto> {
     const gasto = this.gastosRepository.create({
       fecha: dto.fecha,
       item: dto.item,
       motivo: dto.motivo,
       monto: dto.monto,
     });
+
+    if (userId) {
+      gasto.usuario = { id: userId } as Usuario;
+    }
 
     if (dto.aprobadoPorId) {
       const aprobadoPor = await this.personalRepository.findOne({
@@ -42,6 +47,7 @@ export class GastosService {
 
   async findAll(
     filters?: FilterGastosDto,
+    userId?: number,
   ): Promise<{ data: Gasto[]; meta: { total: number; page: number; limit: number } }> {
     const query = this.gastosRepository
       .createQueryBuilder('gasto')
@@ -55,6 +61,7 @@ export class GastosService {
         'aprobadoPor.id',
         'aprobadoPor.nombre',
       ])
+      .where('gasto.usuario_id = :userId', { userId })
       .orderBy('gasto.fecha', 'DESC');
 
     if (filters?.startDate && filters?.endDate) {
@@ -98,9 +105,9 @@ export class GastosService {
     };
   }
 
-  async findOne(id: number): Promise<Gasto> {
+  async findOne(id: number, userId?: number): Promise<Gasto> {
     const gasto = await this.gastosRepository.findOne({
-      where: { id },
+      where: { id, usuario: { id: userId } },
       relations: ['aprobadoPor'],
     });
 
@@ -111,8 +118,8 @@ export class GastosService {
     return gasto;
   }
 
-  async update(id: number, dto: UpdateGastoDto): Promise<Gasto> {
-    const gasto = await this.findOne(id);
+  async update(id: number, dto: UpdateGastoDto, userId?: number): Promise<Gasto> {
+    const gasto = await this.findOne(id, userId);
 
     if (dto.aprobadoPorId !== undefined) {
       if (dto.aprobadoPorId) {
@@ -137,8 +144,8 @@ export class GastosService {
       .finally(() => this.cacheManager.reset());
   }
 
-  async remove(id: number): Promise<void> {
-    const gasto = await this.findOne(id);
+  async remove(id: number, userId?: number): Promise<void> {
+    const gasto = await this.findOne(id, userId);
     await this.gastosRepository.remove(gasto);
     await this.cacheManager.reset();
   }
