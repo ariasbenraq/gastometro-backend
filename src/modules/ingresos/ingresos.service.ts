@@ -5,6 +5,7 @@ import { Cache } from 'cache-manager';
 import { Repository } from 'typeorm';
 import { Ingreso } from '../../entities/ingreso.entity';
 import { PersonalAdministrativo } from '../../entities/personal-administrativo.entity';
+import { Usuario } from '../../entities/usuario.entity';
 import { CreateIngresoDto } from './dto/create-ingreso.dto';
 import { FilterIngresosDto } from './dto/filter-ingresos.dto';
 import { UpdateIngresoDto } from './dto/update-ingreso.dto';
@@ -20,11 +21,15 @@ export class IngresosService {
     private readonly cacheManager: Cache,
   ) {}
 
-  async create(dto: CreateIngresoDto): Promise<Ingreso> {
+  async create(dto: CreateIngresoDto, userId?: number): Promise<Ingreso> {
     const ingreso = this.ingresosRepository.create({
       fecha: dto.fecha,
       monto: dto.monto,
     });
+
+    if (userId) {
+      ingreso.usuario = { id: userId } as Usuario;
+    }
 
     if (dto.depositadoPorId) {
       const depositadoPor = await this.personalRepository.findOne({
@@ -40,6 +45,7 @@ export class IngresosService {
 
   async findAll(
     filters?: FilterIngresosDto,
+    userId?: number,
   ): Promise<{
     data: Ingreso[];
     meta: { total: number; page: number; limit: number };
@@ -54,6 +60,7 @@ export class IngresosService {
         'depositadoPor.id',
         'depositadoPor.nombre',
       ])
+      .where('ingreso.usuario_id = :userId', { userId })
       .orderBy('ingreso.fecha', 'DESC');
 
     if (filters?.startDate && filters?.endDate) {
@@ -94,9 +101,9 @@ export class IngresosService {
     };
   }
 
-  async findOne(id: number): Promise<Ingreso> {
+  async findOne(id: number, userId?: number): Promise<Ingreso> {
     const ingreso = await this.ingresosRepository.findOne({
-      where: { id },
+      where: { id, usuario: { id: userId } },
       relations: ['depositadoPor'],
     });
 
@@ -107,8 +114,12 @@ export class IngresosService {
     return ingreso;
   }
 
-  async update(id: number, dto: UpdateIngresoDto): Promise<Ingreso> {
-    const ingreso = await this.findOne(id);
+  async update(
+    id: number,
+    dto: UpdateIngresoDto,
+    userId?: number,
+  ): Promise<Ingreso> {
+    const ingreso = await this.findOne(id, userId);
 
     if (dto.depositadoPorId !== undefined) {
       if (dto.depositadoPorId) {
@@ -131,8 +142,8 @@ export class IngresosService {
       .finally(() => this.cacheManager.reset());
   }
 
-  async remove(id: number): Promise<void> {
-    const ingreso = await this.findOne(id);
+  async remove(id: number, userId?: number): Promise<void> {
+    const ingreso = await this.findOne(id, userId);
     await this.ingresosRepository.remove(ingreso);
     await this.cacheManager.reset();
   }
