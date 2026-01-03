@@ -20,13 +20,19 @@ export class BalanceService {
     repository: Repository<Ingreso | Gasto | RegistroMovilidades>,
     alias: string,
     range?: { startDate: string; endDate: string },
+    userId?: number,
   ) {
     let query = repository
       .createQueryBuilder(alias)
       .select(`COALESCE(SUM(${alias}.monto), 0)`, 'total');
 
+    if (userId) {
+      query = query.where(`${alias}.usuario_id = :userId`, { userId });
+    }
+
     if (range) {
-      query = query.where(`${alias}.fecha BETWEEN :start AND :end`, {
+      const whereMethod = userId ? 'andWhere' : 'where';
+      query = query[whereMethod](`${alias}.fecha BETWEEN :start AND :end`, {
         start: range.startDate,
         end: range.endDate,
       });
@@ -46,21 +52,27 @@ export class BalanceService {
     return `${year}-${month}-${day}`;
   }
 
-  private async getTotals(range?: { startDate: string; endDate: string }) {
+  private async getTotals(
+    range?: { startDate: string; endDate: string },
+    userId?: number,
+  ) {
     const totalIngresos = await this.sumAmount(
       this.ingresosRepository,
       'ingresos',
       range,
+      userId,
     );
     const totalGastos = await this.sumAmount(
       this.gastosRepository,
       'gastos',
       range,
+      userId,
     );
     const totalMovilidades = await this.sumAmount(
       this.movilidadesRepository,
       'registro_movilidades',
       range,
+      userId,
     );
 
     return {
@@ -71,11 +83,11 @@ export class BalanceService {
     };
   }
 
-  async getBalance() {
-    return this.getTotals();
+  async getBalance(userId?: number) {
+    return this.getTotals(undefined, userId);
   }
 
-  async getMonthlyBalance(year: number, month: number) {
+  async getMonthlyBalance(year: number, month: number, userId?: number) {
     if (!Number.isInteger(year) || year < 1) {
       throw new BadRequestException('El año debe ser un valor válido.');
     }
@@ -94,11 +106,11 @@ export class BalanceService {
     return {
       year,
       month,
-      ...(await this.getTotals(range)),
+      ...(await this.getTotals(range, userId)),
     };
   }
 
-  async getAnnualBalance(year: number) {
+  async getAnnualBalance(year: number, userId?: number) {
     if (!Number.isInteger(year) || year < 1) {
       throw new BadRequestException('El año debe ser un valor válido.');
     }
@@ -112,7 +124,7 @@ export class BalanceService {
 
     return {
       year,
-      ...(await this.getTotals(range)),
+      ...(await this.getTotals(range, userId)),
     };
   }
 }
