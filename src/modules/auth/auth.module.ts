@@ -5,6 +5,7 @@ import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PasswordResetToken } from '../../entities/password-reset-token.entity';
 import { RefreshToken } from '../../entities/refresh-token.entity';
+import { RolesUsuario } from '../../entities/roles-usuario.entity';
 import { Usuario } from '../../entities/usuario.entity';
 import { MailerModule } from '../mailer/mailer.module';
 import { AuthController } from './auth.controller';
@@ -14,7 +15,12 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([Usuario, RefreshToken, PasswordResetToken]),
+    TypeOrmModule.forFeature([
+      Usuario,
+      RolesUsuario,
+      RefreshToken,
+      PasswordResetToken,
+    ]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     MailerModule,
     JwtModule.registerAsync({
