@@ -5,6 +5,7 @@ import { Cache } from 'cache-manager';
 import { Repository } from 'typeorm';
 import { RegistroMovilidades } from '../../entities/registro-movilidades.entity';
 import { TiendaIbk } from '../../entities/tienda-ibk.entity';
+import { Usuario } from '../../entities/usuario.entity';
 import { CreateRegistroMovilidadesDto } from './dto/create-registro-movilidades.dto';
 import { FilterRegistroMovilidadesDto } from './dto/filter-registro-movilidades.dto';
 import { UpdateRegistroMovilidadesDto } from './dto/update-registro-movilidades.dto';
@@ -20,7 +21,10 @@ export class RegistroMovilidadesService {
     private readonly cacheManager: Cache,
   ) {}
 
-  async create(dto: CreateRegistroMovilidadesDto): Promise<RegistroMovilidades> {
+  async create(
+    dto: CreateRegistroMovilidadesDto,
+    userId?: number,
+  ): Promise<RegistroMovilidades> {
     const registro = this.registroRepository.create({
       fecha: dto.fecha,
       inicio: dto.inicio,
@@ -30,6 +34,9 @@ export class RegistroMovilidadesService {
       monto: dto.monto,
       ticket: dto.ticket,
     });
+    if (userId) {
+      registro.usuario = { id: userId } as Usuario;
+    }
 
     if (dto.tiendaId) {
       const tienda = await this.tiendaRepository.findOne({
@@ -45,6 +52,7 @@ export class RegistroMovilidadesService {
 
   async findAll(
     filters?: FilterRegistroMovilidadesDto,
+    userId?: number,
   ): Promise<{
     data: RegistroMovilidades[];
     meta: { total: number; page: number; limit: number };
@@ -65,6 +73,7 @@ export class RegistroMovilidadesService {
         'tienda.codigo_tienda',
         'tienda.nombre_tienda',
       ])
+      .where('registro.usuario_id = :userId', { userId })
       .orderBy('registro.fecha', 'DESC');
 
     if (filters?.startDate && filters?.endDate) {
@@ -113,9 +122,9 @@ export class RegistroMovilidadesService {
     };
   }
 
-  async findOne(id: number): Promise<RegistroMovilidades> {
+  async findOne(id: number, userId?: number): Promise<RegistroMovilidades> {
     const registro = await this.registroRepository.findOne({
-      where: { id },
+      where: { id, usuario: { id: userId } },
       relations: ['tienda'],
     });
 
@@ -126,8 +135,12 @@ export class RegistroMovilidadesService {
     return registro;
   }
 
-  async update(id: number, dto: UpdateRegistroMovilidadesDto): Promise<RegistroMovilidades> {
-    const registro = await this.findOne(id);
+  async update(
+    id: number,
+    dto: UpdateRegistroMovilidadesDto,
+    userId?: number,
+  ): Promise<RegistroMovilidades> {
+    const registro = await this.findOne(id, userId);
 
     if (dto.tiendaId !== undefined) {
       if (dto.tiendaId) {
@@ -155,8 +168,8 @@ export class RegistroMovilidadesService {
       .finally(() => this.cacheManager.reset());
   }
 
-  async remove(id: number): Promise<void> {
-    const registro = await this.findOne(id);
+  async remove(id: number, userId?: number): Promise<void> {
+    const registro = await this.findOne(id, userId);
     await this.registroRepository.remove(registro);
     await this.cacheManager.reset();
   }
