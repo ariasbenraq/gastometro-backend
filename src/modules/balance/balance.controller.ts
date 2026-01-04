@@ -1,7 +1,7 @@
 import {
+  BadRequestException,
   Controller,
   Get,
-  ParseIntPipe,
   ParseEnumPipe,
   Query,
   UseInterceptors,
@@ -37,16 +37,42 @@ export class BalanceController {
     return requestedUserId;
   }
 
+  private parseOptionalInt(value: string | undefined, field: string) {
+    if (value === undefined || value === '') {
+      return undefined;
+    }
+
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed)) {
+      throw new BadRequestException(
+        `El parámetro ${field} debe ser un número entero válido.`,
+      );
+    }
+
+    return parsed;
+  }
+
+  private parseRequiredInt(value: string | undefined, field: string) {
+    if (value === undefined || value === '') {
+      throw new BadRequestException(`El parámetro ${field} es obligatorio.`);
+    }
+
+    return this.parseOptionalInt(value, field) as number;
+  }
+
   @Get()
   @CacheTTL(30)
   @Roles(UserRole.ADMIN, UserRole.ANALYST_BALANCE, UserRole.USER)
   getBalance(
-    @Query('userId', new ParseIntPipe({ optional: true })) userId?: number,
+    @Query('userId') userId?: string,
     @Query('dateField', new ParseEnumPipe(BalanceDateField, { optional: true }))
     dateField?: BalanceDateField,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const resolvedUserId = this.resolveUserId(user, userId);
+    const resolvedUserId = this.resolveUserId(
+      user,
+      this.parseOptionalInt(userId, 'userId'),
+    );
     return this.balanceService.getBalance(
       resolvedUserId,
       this.resolveDateField(dateField),
@@ -57,17 +83,20 @@ export class BalanceController {
   @CacheTTL(30)
   @Roles(UserRole.ADMIN, UserRole.ANALYST_BALANCE, UserRole.USER)
   getMonthlyBalance(
-    @Query('year', ParseIntPipe) year: number,
-    @Query('month', ParseIntPipe) month: number,
-    @Query('userId', new ParseIntPipe({ optional: true })) userId?: number,
+    @Query('year') year?: string,
+    @Query('month') month?: string,
+    @Query('userId') userId?: string,
     @Query('dateField', new ParseEnumPipe(BalanceDateField, { optional: true }))
     dateField?: BalanceDateField,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const resolvedUserId = this.resolveUserId(user, userId);
+    const resolvedUserId = this.resolveUserId(
+      user,
+      this.parseOptionalInt(userId, 'userId'),
+    );
     return this.balanceService.getMonthlyBalance(
-      year,
-      month,
+      this.parseRequiredInt(year, 'year'),
+      this.parseRequiredInt(month, 'month'),
       resolvedUserId,
       this.resolveDateField(dateField),
     );
@@ -77,15 +106,18 @@ export class BalanceController {
   @CacheTTL(30)
   @Roles(UserRole.ADMIN, UserRole.ANALYST_BALANCE, UserRole.USER)
   getAnnualBalance(
-    @Query('year', ParseIntPipe) year: number,
-    @Query('userId', new ParseIntPipe({ optional: true })) userId?: number,
+    @Query('year') year?: string,
+    @Query('userId') userId?: string,
     @Query('dateField', new ParseEnumPipe(BalanceDateField, { optional: true }))
     dateField?: BalanceDateField,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const resolvedUserId = this.resolveUserId(user, userId);
+    const resolvedUserId = this.resolveUserId(
+      user,
+      this.parseOptionalInt(userId, 'userId'),
+    );
     return this.balanceService.getAnnualBalance(
-      year,
+      this.parseRequiredInt(year, 'year'),
       resolvedUserId,
       this.resolveDateField(dateField),
     );
