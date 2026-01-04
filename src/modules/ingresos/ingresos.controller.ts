@@ -37,7 +37,8 @@ export class IngresosController {
     @Body() dto: CreateIngresoDto,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user);
+    const userId =
+      user?.rol === UserRole.USER ? user.userId : dto.usuarioId;
     return this.ingresosService.create(dto, userId);
   }
 
