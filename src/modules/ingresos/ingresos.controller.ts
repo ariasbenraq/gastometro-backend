@@ -27,8 +27,8 @@ import { IngresosService } from './ingresos.service';
 export class IngresosController {
   constructor(private readonly ingresosService: IngresosService) {}
 
-  private resolveUserId(user?: AuthenticatedUser) {
-    return user?.rol === UserRole.USER ? user.userId : undefined;
+  private resolveUserId(user?: AuthenticatedUser, requestedUserId?: number) {
+    return user?.rol === UserRole.USER ? user.userId : requestedUserId;
   }
 
   @Post()
@@ -49,7 +49,7 @@ export class IngresosController {
     @Query() query: FilterIngresosDto,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user);
+    const userId = this.resolveUserId(user, query.userId);
     return this.ingresosService.findAll(query, userId);
   }
 
