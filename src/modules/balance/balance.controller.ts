@@ -15,6 +15,11 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/dto/signup.dto';
 import { BalanceService } from './balance.service';
 
+enum BalanceDateField {
+  FECHA = 'fecha',
+  CREATED_AT = 'createdAt',
+}
+
 @Controller('balance')
 @UseInterceptors(CacheInterceptor)
 export class BalanceController {
@@ -85,9 +90,4 @@ export class BalanceController {
       this.resolveDateField(dateField),
     );
   }
-}
-
-enum BalanceDateField {
-  FECHA = 'fecha',
-  CREATED_AT = 'createdAt',
 }
