@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   ParseEnumPipe,
+  ParseIntPipe,
   Query,
   UseInterceptors,
 } from '@nestjs/common';

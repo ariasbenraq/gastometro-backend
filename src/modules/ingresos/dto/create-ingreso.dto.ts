@@ -10,10 +10,6 @@ export class CreateIngresoDto {
 
   @IsOptional()
   @IsNumber()
-  usuarioId?: number;
-
-  @IsOptional()
-  @IsNumber()
   depositadoPorId?: number;
 
   @IsOptional()
