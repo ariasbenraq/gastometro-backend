@@ -27,8 +27,12 @@ import { RegistroMovilidadesService } from './registro-movilidades.service';
 export class RegistroMovilidadesController {
   constructor(private readonly registroService: RegistroMovilidadesService) {}
 
-  private resolveUserId(user?: AuthenticatedUser) {
-    return user?.rol === UserRole.USER ? user.userId : undefined;
+  private resolveUserId(user?: AuthenticatedUser, requestedUserId?: number) {
+    if (user?.rol === UserRole.USER) {
+      return user.userId;
+    }
+
+    return requestedUserId;
   }
 
   @Post()
@@ -48,7 +52,7 @@ export class RegistroMovilidadesController {
     @Query() query: FilterRegistroMovilidadesDto,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user);
+    const userId = this.resolveUserId(user, query.userId);
     return this.registroService.findAll(query, userId);
   }
 

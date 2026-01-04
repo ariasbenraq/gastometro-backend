@@ -27,8 +27,9 @@ export class IngresosService {
       monto: dto.monto,
     });
 
-    if (userId) {
-      ingreso.usuario = { id: userId } as Usuario;
+    const resolvedUserId = userId ?? dto.usuarioId;
+    if (resolvedUserId) {
+      ingreso.usuario = { id: resolvedUserId } as Usuario;
     }
 
     if (dto.depositadoPorId) {

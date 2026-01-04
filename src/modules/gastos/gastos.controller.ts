@@ -27,8 +27,12 @@ import { GastosService } from './gastos.service';
 export class GastosController {
   constructor(private readonly gastosService: GastosService) {}
 
-  private resolveUserId(user?: AuthenticatedUser) {
-    return user?.rol === UserRole.USER ? user.userId : undefined;
+  private resolveUserId(user?: AuthenticatedUser, requestedUserId?: number) {
+    if (user?.rol === UserRole.USER) {
+      return user.userId;
+    }
+
+    return requestedUserId;
   }
 
   @Post()
@@ -48,7 +52,7 @@ export class GastosController {
     @Query() query: FilterGastosDto,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user);
+    const userId = this.resolveUserId(user, query.userId);
     return this.gastosService.findAll(query, userId);
   }
 

@@ -21,6 +21,7 @@ export class BalanceService {
     alias: string,
     range?: { startDate: string; endDate: string },
     userId?: number,
+    dateField: 'fecha' | 'createdAt' = 'fecha',
   ) {
     let query = repository
       .createQueryBuilder(alias)
@@ -32,10 +33,13 @@ export class BalanceService {
 
     if (range) {
       const whereMethod = userId ? 'andWhere' : 'where';
-      query = query[whereMethod](`${alias}.fecha BETWEEN :start AND :end`, {
+      query = query[whereMethod](
+        `${alias}.${dateField} BETWEEN :start AND :end`,
+        {
         start: range.startDate,
         end: range.endDate,
-      });
+        },
+      );
     }
 
     const result = (await query.getRawOne<{ total: string }>()) ?? {
@@ -55,24 +59,28 @@ export class BalanceService {
   private async getTotals(
     range?: { startDate: string; endDate: string },
     userId?: number,
+    dateField: 'fecha' | 'createdAt' = 'fecha',
   ) {
     const totalIngresos = await this.sumAmount(
       this.ingresosRepository,
       'ingresos',
       range,
       userId,
+      dateField,
     );
     const totalGastos = await this.sumAmount(
       this.gastosRepository,
       'gastos',
       range,
       userId,
+      dateField,
     );
     const totalMovilidades = await this.sumAmount(
       this.movilidadesRepository,
       'registro_movilidades',
       range,
       userId,
+      dateField,
     );
 
     return {
@@ -83,11 +91,16 @@ export class BalanceService {
     };
   }
 
-  async getBalance(userId?: number) {
-    return this.getTotals(undefined, userId);
+  async getBalance(userId?: number, dateField: 'fecha' | 'createdAt' = 'fecha') {
+    return this.getTotals(undefined, userId, dateField);
   }
 
-  async getMonthlyBalance(year: number, month: number, userId?: number) {
+  async getMonthlyBalance(
+    year: number,
+    month: number,
+    userId?: number,
+    dateField: 'fecha' | 'createdAt' = 'fecha',
+  ) {
     if (!Number.isInteger(year) || year < 1) {
       throw new BadRequestException('El año debe ser un valor válido.');
     }
@@ -106,11 +119,15 @@ export class BalanceService {
     return {
       year,
       month,
-      ...(await this.getTotals(range, userId)),
+      ...(await this.getTotals(range, userId, dateField)),
     };
   }
 
-  async getAnnualBalance(year: number, userId?: number) {
+  async getAnnualBalance(
+    year: number,
+    userId?: number,
+    dateField: 'fecha' | 'createdAt' = 'fecha',
+  ) {
     if (!Number.isInteger(year) || year < 1) {
       throw new BadRequestException('El año debe ser un valor válido.');
     }
@@ -124,7 +141,7 @@ export class BalanceService {
 
     return {
       year,
-      ...(await this.getTotals(range, userId)),
+      ...(await this.getTotals(range, userId, dateField)),
     };
   }
 }

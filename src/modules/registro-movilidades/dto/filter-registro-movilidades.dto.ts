@@ -25,4 +25,10 @@ export class FilterRegistroMovilidadesDto {
   @IsInt()
   @Min(1)
   limit?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  userId?: number;
 }

@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   ParseIntPipe,
+  ParseEnumPipe,
   Query,
   UseInterceptors,
 } from '@nestjs/common';
@@ -19,16 +20,32 @@ import { BalanceService } from './balance.service';
 export class BalanceController {
   constructor(private readonly balanceService: BalanceService) {}
 
-  private resolveUserId(user?: AuthenticatedUser) {
-    return user?.rol === UserRole.USER ? user.userId : undefined;
+  private resolveDateField(field?: BalanceDateField) {
+    return field ?? BalanceDateField.FECHA;
+  }
+
+  private resolveUserId(user?: AuthenticatedUser, requestedUserId?: number) {
+    if (user?.rol === UserRole.USER) {
+      return user.userId;
+    }
+
+    return requestedUserId;
   }
 
   @Get()
   @CacheTTL(30)
   @Roles(UserRole.ADMIN, UserRole.ANALYST_BALANCE, UserRole.USER)
-  getBalance(@CurrentUser() user?: AuthenticatedUser) {
-    const userId = this.resolveUserId(user);
-    return this.balanceService.getBalance(userId);
+  getBalance(
+    @Query('userId', new ParseIntPipe({ optional: true })) userId?: number,
+    @Query('dateField', new ParseEnumPipe(BalanceDateField, { optional: true }))
+    dateField?: BalanceDateField,
+    @CurrentUser() user?: AuthenticatedUser,
+  ) {
+    const resolvedUserId = this.resolveUserId(user, userId);
+    return this.balanceService.getBalance(
+      resolvedUserId,
+      this.resolveDateField(dateField),
+    );
   }
 
   @Get('mensual')
@@ -37,10 +54,18 @@ export class BalanceController {
   getMonthlyBalance(
     @Query('year', ParseIntPipe) year: number,
     @Query('month', ParseIntPipe) month: number,
+    @Query('userId', new ParseIntPipe({ optional: true })) userId?: number,
+    @Query('dateField', new ParseEnumPipe(BalanceDateField, { optional: true }))
+    dateField?: BalanceDateField,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user);
-    return this.balanceService.getMonthlyBalance(year, month, userId);
+    const resolvedUserId = this.resolveUserId(user, userId);
+    return this.balanceService.getMonthlyBalance(
+      year,
+      month,
+      resolvedUserId,
+      this.resolveDateField(dateField),
+    );
   }
 
   @Get('anual')
@@ -48,9 +73,21 @@ export class BalanceController {
   @Roles(UserRole.ADMIN, UserRole.ANALYST_BALANCE, UserRole.USER)
   getAnnualBalance(
     @Query('year', ParseIntPipe) year: number,
+    @Query('userId', new ParseIntPipe({ optional: true })) userId?: number,
+    @Query('dateField', new ParseEnumPipe(BalanceDateField, { optional: true }))
+    dateField?: BalanceDateField,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user);
-    return this.balanceService.getAnnualBalance(year, userId);
+    const resolvedUserId = this.resolveUserId(user, userId);
+    return this.balanceService.getAnnualBalance(
+      year,
+      resolvedUserId,
+      this.resolveDateField(dateField),
+    );
   }
+}
+
+enum BalanceDateField {
+  FECHA = 'fecha',
+  CREATED_AT = 'createdAt',
 }
