@@ -15,6 +15,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
 import { TiendasIbkModule } from './modules/tiendas-ibk/tiendas-ibk.module';
 import { HealthModule } from './health/health.module';
+import { UsuariosModule } from './modules/usuarios/usuarios.module';
 
 const validationSchema = Joi.object({
   DB_HOST: Joi.string().default('192.168.18.10'),
@@ -65,6 +66,7 @@ const validationSchema = Joi.object({
     BalanceModule,
     TiendasIbkModule,
     HealthModule,
+    UsuariosModule,
   ],
   providers: [
     {

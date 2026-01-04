@@ -3,6 +3,12 @@ import { IsDateString, IsInt, IsOptional, IsString, Min } from 'class-validator'
 
 export class FilterGastosDto {
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  userId?: number;
+
+  @IsOptional()
   @IsDateString()
   startDate?: string;
 

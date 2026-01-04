@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   ParseIntPipe,
@@ -19,16 +20,30 @@ import { BalanceService } from './balance.service';
 export class BalanceController {
   constructor(private readonly balanceService: BalanceService) {}
 
-  private resolveUserId(user?: AuthenticatedUser) {
-    return user?.rol === UserRole.USER ? user.userId : undefined;
+  private resolveUserId(user?: AuthenticatedUser, requestedUserId?: number) {
+    return user?.rol === UserRole.USER ? user.userId : requestedUserId;
+  }
+
+  private parseUserId(userId?: string) {
+    if (!userId) {
+      return undefined;
+    }
+    const parsed = Number(userId);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      throw new BadRequestException('El usuario debe ser un id válido.');
+    }
+    return parsed;
   }
 
   @Get()
   @CacheTTL(30)
   @Roles(UserRole.ADMIN, UserRole.ANALYST_BALANCE, UserRole.USER)
-  getBalance(@CurrentUser() user?: AuthenticatedUser) {
-    const userId = this.resolveUserId(user);
-    return this.balanceService.getBalance(userId);
+  getBalance(
+    @Query('userId') userId?: string,
+    @CurrentUser() user?: AuthenticatedUser,
+  ) {
+    const resolvedUserId = this.resolveUserId(user, this.parseUserId(userId));
+    return this.balanceService.getBalance(resolvedUserId);
   }
 
   @Get('mensual')
@@ -37,10 +52,11 @@ export class BalanceController {
   getMonthlyBalance(
     @Query('year', ParseIntPipe) year: number,
     @Query('month', ParseIntPipe) month: number,
+    @Query('userId') userId?: string,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user);
-    return this.balanceService.getMonthlyBalance(year, month, userId);
+    const resolvedUserId = this.resolveUserId(user, this.parseUserId(userId));
+    return this.balanceService.getMonthlyBalance(year, month, resolvedUserId);
   }
 
   @Get('anual')
@@ -48,9 +64,10 @@ export class BalanceController {
   @Roles(UserRole.ADMIN, UserRole.ANALYST_BALANCE, UserRole.USER)
   getAnnualBalance(
     @Query('year', ParseIntPipe) year: number,
+    @Query('userId') userId?: string,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user);
-    return this.balanceService.getAnnualBalance(year, userId);
+    const resolvedUserId = this.resolveUserId(user, this.parseUserId(userId));
+    return this.balanceService.getAnnualBalance(year, resolvedUserId);
   }
 }
