@@ -1,11 +1,17 @@
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';
 import { Repository } from 'typeorm';
 import { Ingreso } from '../../entities/ingreso.entity';
 import { PersonalAdministrativo } from '../../entities/personal-administrativo.entity';
 import { Usuario } from '../../entities/usuario.entity';
+import { UserRole } from '../auth/dto/signup.dto';
 import { CreateIngresoDto } from './dto/create-ingreso.dto';
 import { FilterIngresosDto } from './dto/filter-ingresos.dto';
 import { UpdateIngresoDto } from './dto/update-ingreso.dto';
@@ -17,20 +23,40 @@ export class IngresosService {
     private readonly ingresosRepository: Repository<Ingreso>,
     @InjectRepository(PersonalAdministrativo)
     private readonly personalRepository: Repository<PersonalAdministrativo>,
+    @InjectRepository(Usuario)
+    private readonly usuariosRepository: Repository<Usuario>,
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
   ) {}
 
   async create(dto: CreateIngresoDto, userId?: number): Promise<Ingreso> {
+    if (!userId) {
+      throw new BadRequestException(
+        'Debe especificar el usuario para registrar el ingreso.',
+      );
+    }
+
+    const usuario = await this.usuariosRepository.findOne({
+      where: { id: userId },
+      relations: ['rol'],
+    });
+
+    if (!usuario) {
+      throw new NotFoundException(`Usuario ${userId} no encontrado`);
+    }
+
+    if (usuario.rol?.nombre !== UserRole.USER) {
+      throw new BadRequestException(
+        'El ingreso solo puede asignarse a usuarios con rol USER.',
+      );
+    }
+
     const ingreso = this.ingresosRepository.create({
       fecha: dto.fecha,
       monto: dto.monto,
     });
 
-    const resolvedUserId = userId ?? dto.usuarioId;
-    if (resolvedUserId) {
-      ingreso.usuario = { id: resolvedUserId } as Usuario;
-    }
+    ingreso.usuario = usuario;
 
     if (dto.depositadoPorId) {
       const depositadoPor = await this.personalRepository.findOne({

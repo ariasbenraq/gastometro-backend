@@ -28,11 +28,7 @@ export class RegistroMovilidadesController {
   constructor(private readonly registroService: RegistroMovilidadesService) {}
 
   private resolveUserId(user?: AuthenticatedUser, requestedUserId?: number) {
-    if (user?.rol === UserRole.USER) {
-      return user.userId;
-    }
-
-    return requestedUserId;
+    return user?.rol === UserRole.USER ? user.userId : requestedUserId;
   }
 
   @Post()

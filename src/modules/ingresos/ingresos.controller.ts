@@ -29,23 +29,17 @@ export class IngresosController {
   constructor(private readonly ingresosService: IngresosService) {}
 
   private resolveUserId(user?: AuthenticatedUser, requestedUserId?: number) {
-    if (user?.rol === UserRole.USER) {
-      return user.userId;
-    }
-
-    return requestedUserId;
+    return user?.rol === UserRole.USER ? user.userId : requestedUserId;
   }
 
   @Post()
-  @Roles(UserRole.ANALYST_BALANCE)
-  create(@Body() dto: CreateIngresoDto) {
-    if (!dto.usuarioId) {
-      throw new BadRequestException(
-        'El usuario es obligatorio para registrar ingresos.',
-      );
-    }
-
-    const userId = dto.usuarioId;
+  @Roles(UserRole.ADMIN, UserRole.ANALYST_BALANCE, UserRole.USER)
+  create(
+    @Body() dto: CreateIngresoDto,
+    @CurrentUser() user?: AuthenticatedUser,
+  ) {
+    const userId =
+      user?.rol === UserRole.USER ? user.userId : dto.usuarioId;
     return this.ingresosService.create(dto, userId);
   }
 
