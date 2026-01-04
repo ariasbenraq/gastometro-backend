@@ -2,7 +2,7 @@ import {
   BadRequestException,
   Controller,
   Get,
-  ParseIntPipe,
+  ParseEnumPipe,
   Query,
   UseInterceptors,
 } from '@nestjs/common';
@@ -14,6 +14,11 @@ import {
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/dto/signup.dto';
 import { BalanceService } from './balance.service';
+
+enum BalanceDateField {
+  FECHA = 'fecha',
+  CREATED_AT = 'createdAt',
+}
 
 @Controller('balance')
 @UseInterceptors(CacheInterceptor)
