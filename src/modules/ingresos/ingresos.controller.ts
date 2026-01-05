@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -28,19 +27,13 @@ import { IngresosService } from './ingresos.service';
 export class IngresosController {
   constructor(private readonly ingresosService: IngresosService) {}
 
-  private resolveUserId(user?: AuthenticatedUser, requestedUserId?: number) {
-    return user?.rol === UserRole.USER ? user.userId : requestedUserId;
-  }
-
   @Post()
   @Roles(UserRole.ADMIN, UserRole.ANALYST_BALANCE, UserRole.USER)
   create(
     @Body() dto: CreateIngresoDto,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId =
-      user?.rol === UserRole.USER ? user.userId : dto.usuarioId;
-    return this.ingresosService.create(dto, userId);
+    return this.ingresosService.create(dto, user);
   }
 
   @Get()
@@ -50,8 +43,7 @@ export class IngresosController {
     @Query() query: FilterIngresosDto,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user, query.userId);
-    return this.ingresosService.findAll(query, userId);
+    return this.ingresosService.findAll(query, user);
   }
 
   @Get(':id')
@@ -61,8 +53,7 @@ export class IngresosController {
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user);
-    return this.ingresosService.findOne(id, userId);
+    return this.ingresosService.findOne(id, user);
   }
 
   @Patch(':id')
@@ -72,8 +63,7 @@ export class IngresosController {
     @Body() dto: UpdateIngresoDto,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user);
-    return this.ingresosService.update(id, dto, userId);
+    return this.ingresosService.update(id, dto, user);
   }
 
   @Delete(':id')
@@ -82,7 +72,6 @@ export class IngresosController {
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user);
-    return this.ingresosService.remove(id, userId);
+    return this.ingresosService.remove(id, user);
   }
 }

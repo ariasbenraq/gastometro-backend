@@ -1,5 +1,13 @@
 import { Type } from 'class-transformer';
-import { IsDateString, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  ValidateIf,
+} from 'class-validator';
 
 export class FilterGastosDto {
   @IsOptional()
@@ -10,11 +18,24 @@ export class FilterGastosDto {
 
   @IsOptional()
   @IsDateString()
-  startDate?: string;
+  from?: string;
 
   @IsOptional()
   @IsDateString()
-  endDate?: string;
+  to?: string;
+
+  @ValidateIf((object) => object.month !== undefined)
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  month?: number;
+
+  @ValidateIf((object) => object.year !== undefined || object.month !== undefined)
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  year?: number;
 
   @IsOptional()
   @IsString()

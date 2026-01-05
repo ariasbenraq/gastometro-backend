@@ -4,6 +4,9 @@ import { Repository } from 'typeorm';
 import { Gasto } from '../../entities/gasto.entity';
 import { Ingreso } from '../../entities/ingreso.entity';
 import { RegistroMovilidades } from '../../entities/registro-movilidades.entity';
+import { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
+import { UserRole } from '../auth/dto/signup.dto';
+import { BalanceQueryDto } from './dto/balance-query.dto';
 
 @Injectable()
 export class BalanceService {
@@ -19,7 +22,7 @@ export class BalanceService {
   private async sumAmount(
     repository: Repository<Ingreso | Gasto | RegistroMovilidades>,
     alias: string,
-    range?: { startDate: string; endDate: string },
+    range?: { startDate?: string; endDate?: string },
     userId?: number,
     dateField: 'fecha' | 'createdAt' = 'fecha',
   ) {
@@ -31,14 +34,26 @@ export class BalanceService {
       query = query.where(`${alias}.usuario_id = :userId`, { userId });
     }
 
-    if (range) {
+    if (range?.startDate && range?.endDate) {
       const whereMethod = userId ? 'andWhere' : 'where';
       query = query[whereMethod](
         `${alias}.${dateField} BETWEEN :start AND :end`,
         {
-        start: range.startDate,
-        end: range.endDate,
+          start: range.startDate,
+          end: range.endDate,
         },
+      );
+    } else if (range?.startDate) {
+      const whereMethod = userId ? 'andWhere' : 'where';
+      query = query[whereMethod](
+        `${alias}.${dateField} >= :start`,
+        { start: range.startDate },
+      );
+    } else if (range?.endDate) {
+      const whereMethod = userId ? 'andWhere' : 'where';
+      query = query[whereMethod](
+        `${alias}.${dateField} <= :end`,
+        { end: range.endDate },
       );
     }
 
@@ -56,8 +71,56 @@ export class BalanceService {
     return `${year}-${month}-${day}`;
   }
 
+  private resolveUserId(
+    currentUser?: AuthenticatedUser,
+    requestedUserId?: number,
+  ) {
+    if (currentUser?.rol === UserRole.USER) {
+      return currentUser.userId;
+    }
+    return requestedUserId;
+  }
+
+  private resolveDateRange(filters?: BalanceQueryDto) {
+    if (!filters) {
+      return undefined;
+    }
+
+    if (filters.from || filters.to) {
+      return {
+        startDate: filters.from,
+        endDate: filters.to,
+      };
+    }
+
+    if (filters.month !== undefined) {
+      if (!filters.year) {
+        throw new BadRequestException(
+          'El año es obligatorio cuando se especifica el mes.',
+        );
+      }
+      const start = new Date(Date.UTC(filters.year, filters.month - 1, 1));
+      const end = new Date(Date.UTC(filters.year, filters.month, 0));
+      return {
+        startDate: this.formatDate(start),
+        endDate: this.formatDate(end),
+      };
+    }
+
+    if (filters.year) {
+      const start = new Date(Date.UTC(filters.year, 0, 1));
+      const end = new Date(Date.UTC(filters.year, 11, 31));
+      return {
+        startDate: this.formatDate(start),
+        endDate: this.formatDate(end),
+      };
+    }
+
+    return undefined;
+  }
+
   private async getTotals(
-    range?: { startDate: string; endDate: string },
+    range?: { startDate?: string; endDate?: string },
     userId?: number,
     dateField: 'fecha' | 'createdAt' = 'fecha',
   ) {
@@ -91,56 +154,51 @@ export class BalanceService {
     };
   }
 
-  async getBalance(userId?: number, dateField: 'fecha' | 'createdAt' = 'fecha') {
-    return this.getTotals(undefined, userId, dateField);
+  async getBalance(
+    filters: BalanceQueryDto,
+    currentUser?: AuthenticatedUser,
+    dateField: 'fecha' | 'createdAt' = 'fecha',
+  ) {
+    const userId = this.resolveUserId(currentUser, filters.userId);
+    const range = this.resolveDateRange(filters);
+    return this.getTotals(range, userId, dateField);
   }
 
   async getMonthlyBalance(
-    year: number,
-    month: number,
-    userId?: number,
+    filters: BalanceQueryDto,
+    currentUser?: AuthenticatedUser,
     dateField: 'fecha' | 'createdAt' = 'fecha',
   ) {
-    if (!Number.isInteger(year) || year < 1) {
-      throw new BadRequestException('El año debe ser un valor válido.');
+    if (!filters.month || !filters.year) {
+      throw new BadRequestException(
+        'Debe especificar el año y mes para el balance mensual.',
+      );
     }
 
-    if (!Number.isInteger(month) || month < 1 || month > 12) {
-      throw new BadRequestException('El mes debe estar entre 1 y 12.');
-    }
-
-    const start = new Date(Date.UTC(year, month - 1, 1));
-    const end = new Date(Date.UTC(year, month, 0));
-    const range = {
-      startDate: this.formatDate(start),
-      endDate: this.formatDate(end),
-    };
+    const userId = this.resolveUserId(currentUser, filters.userId);
+    const range = this.resolveDateRange(filters);
 
     return {
-      year,
-      month,
+      year: filters.year,
+      month: filters.month,
       ...(await this.getTotals(range, userId, dateField)),
     };
   }
 
   async getAnnualBalance(
-    year: number,
-    userId?: number,
+    filters: BalanceQueryDto,
+    currentUser?: AuthenticatedUser,
     dateField: 'fecha' | 'createdAt' = 'fecha',
   ) {
-    if (!Number.isInteger(year) || year < 1) {
-      throw new BadRequestException('El año debe ser un valor válido.');
+    if (!filters.year) {
+      throw new BadRequestException('Debe especificar el año del balance.');
     }
 
-    const start = new Date(Date.UTC(year, 0, 1));
-    const end = new Date(Date.UTC(year, 11, 31));
-    const range = {
-      startDate: this.formatDate(start),
-      endDate: this.formatDate(end),
-    };
+    const userId = this.resolveUserId(currentUser, filters.userId);
+    const range = this.resolveDateRange(filters);
 
     return {
-      year,
+      year: filters.year,
       ...(await this.getTotals(range, userId, dateField)),
     };
   }

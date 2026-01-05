@@ -27,18 +27,13 @@ import { RegistroMovilidadesService } from './registro-movilidades.service';
 export class RegistroMovilidadesController {
   constructor(private readonly registroService: RegistroMovilidadesService) {}
 
-  private resolveUserId(user?: AuthenticatedUser, requestedUserId?: number) {
-    return user?.rol === UserRole.USER ? user.userId : requestedUserId;
-  }
-
   @Post()
   @Roles(UserRole.ADMIN, UserRole.USER)
   create(
     @Body() dto: CreateRegistroMovilidadesDto,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user);
-    return this.registroService.create(dto, userId);
+    return this.registroService.create(dto, user);
   }
 
   @Get()
@@ -48,8 +43,7 @@ export class RegistroMovilidadesController {
     @Query() query: FilterRegistroMovilidadesDto,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user, query.userId);
-    return this.registroService.findAll(query, userId);
+    return this.registroService.findAll(query, user);
   }
 
   @Get(':id')
@@ -59,8 +53,7 @@ export class RegistroMovilidadesController {
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user);
-    return this.registroService.findOne(id, userId);
+    return this.registroService.findOne(id, user);
   }
 
   @Patch(':id')
@@ -70,8 +63,7 @@ export class RegistroMovilidadesController {
     @Body() dto: UpdateRegistroMovilidadesDto,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user);
-    return this.registroService.update(id, dto, userId);
+    return this.registroService.update(id, dto, user);
   }
 
   @Delete(':id')
@@ -80,7 +72,6 @@ export class RegistroMovilidadesController {
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user);
-    return this.registroService.remove(id, userId);
+    return this.registroService.remove(id, user);
   }
 }

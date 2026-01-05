@@ -1,11 +1,18 @@
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';
 import { Repository } from 'typeorm';
 import { RegistroMovilidades } from '../../entities/registro-movilidades.entity';
 import { TiendaIbk } from '../../entities/tienda-ibk.entity';
 import { Usuario } from '../../entities/usuario.entity';
+import { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
+import { UserRole } from '../auth/dto/signup.dto';
 import { CreateRegistroMovilidadesDto } from './dto/create-registro-movilidades.dto';
 import { FilterRegistroMovilidadesDto } from './dto/filter-registro-movilidades.dto';
 import { UpdateRegistroMovilidadesDto } from './dto/update-registro-movilidades.dto';
@@ -21,10 +28,87 @@ export class RegistroMovilidadesService {
     private readonly cacheManager: Cache,
   ) {}
 
+  private formatDate(date: Date) {
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private resolveTargetUserId(
+    currentUser?: AuthenticatedUser,
+    requestedUserId?: number,
+  ) {
+    if (currentUser?.rol === UserRole.USER) {
+      return currentUser.userId;
+    }
+
+    if (!requestedUserId) {
+      throw new BadRequestException(
+        'Debe especificar el usuario para registrar la movilidad.',
+      );
+    }
+
+    return requestedUserId;
+  }
+
+  private resolveFilterUserId(
+    currentUser?: AuthenticatedUser,
+    requestedUserId?: number,
+  ) {
+    if (currentUser?.rol === UserRole.USER) {
+      return currentUser.userId;
+    }
+    return requestedUserId;
+  }
+
+  private resolveOwnershipUserId(currentUser?: AuthenticatedUser) {
+    if (currentUser?.rol === UserRole.USER) {
+      return currentUser.userId;
+    }
+    return undefined;
+  }
+
+  private resolveDateRange(filters?: FilterRegistroMovilidadesDto) {
+    if (!filters) {
+      return {};
+    }
+
+    if (filters.from || filters.to) {
+      return { startDate: filters.from, endDate: filters.to };
+    }
+
+    if (filters.month !== undefined) {
+      if (!filters.year) {
+        throw new BadRequestException(
+          'El año es obligatorio cuando se especifica el mes.',
+        );
+      }
+      const start = new Date(Date.UTC(filters.year, filters.month - 1, 1));
+      const end = new Date(Date.UTC(filters.year, filters.month, 0));
+      return {
+        startDate: this.formatDate(start),
+        endDate: this.formatDate(end),
+      };
+    }
+
+    if (filters.year) {
+      const start = new Date(Date.UTC(filters.year, 0, 1));
+      const end = new Date(Date.UTC(filters.year, 11, 31));
+      return {
+        startDate: this.formatDate(start),
+        endDate: this.formatDate(end),
+      };
+    }
+
+    return {};
+  }
+
   async create(
     dto: CreateRegistroMovilidadesDto,
-    userId?: number,
+    currentUser?: AuthenticatedUser,
   ): Promise<RegistroMovilidades> {
+    const userId = this.resolveTargetUserId(currentUser, dto.userId);
     const registro = this.registroRepository.create({
       fecha: dto.fecha,
       inicio: dto.inicio,
@@ -34,9 +118,7 @@ export class RegistroMovilidadesService {
       monto: dto.monto,
       ticket: dto.ticket,
     });
-    if (userId) {
-      registro.usuario = { id: userId } as Usuario;
-    }
+    registro.usuario = { id: userId } as Usuario;
 
     if (dto.tiendaId) {
       const tienda = await this.tiendaRepository.findOne({
@@ -52,11 +134,13 @@ export class RegistroMovilidadesService {
 
   async findAll(
     filters?: FilterRegistroMovilidadesDto,
-    userId?: number,
+    currentUser?: AuthenticatedUser,
   ): Promise<{
     data: RegistroMovilidades[];
     meta: { total: number; page: number; limit: number };
   }> {
+    const userId = this.resolveFilterUserId(currentUser, filters?.userId);
+    const { startDate, endDate } = this.resolveDateRange(filters);
     const query = this.registroRepository
       .createQueryBuilder('registro')
       .leftJoin('registro.tienda', 'tienda')
@@ -81,20 +165,20 @@ export class RegistroMovilidadesService {
       hasWhere = true;
     }
 
-    if (filters?.startDate && filters?.endDate) {
+    if (startDate && endDate) {
       const method = hasWhere ? 'andWhere' : 'where';
       query[method]('registro.fecha BETWEEN :start AND :end', {
-        start: filters.startDate,
-        end: filters.endDate,
+        start: startDate,
+        end: endDate,
       });
       hasWhere = true;
-    } else if (filters?.startDate) {
+    } else if (startDate) {
       const method = hasWhere ? 'andWhere' : 'where';
-      query[method]('registro.fecha >= :start', { start: filters.startDate });
+      query[method]('registro.fecha >= :start', { start: startDate });
       hasWhere = true;
-    } else if (filters?.endDate) {
+    } else if (endDate) {
       const method = hasWhere ? 'andWhere' : 'where';
-      query[method]('registro.fecha <= :end', { end: filters.endDate });
+      query[method]('registro.fecha <= :end', { end: endDate });
       hasWhere = true;
     }
 
@@ -135,7 +219,11 @@ export class RegistroMovilidadesService {
     };
   }
 
-  async findOne(id: number, userId?: number): Promise<RegistroMovilidades> {
+  async findOne(
+    id: number,
+    currentUser?: AuthenticatedUser,
+  ): Promise<RegistroMovilidades> {
+    const userId = this.resolveOwnershipUserId(currentUser);
     const whereClause = userId
       ? { id, usuario: { id: userId } }
       : { id };
@@ -154,9 +242,9 @@ export class RegistroMovilidadesService {
   async update(
     id: number,
     dto: UpdateRegistroMovilidadesDto,
-    userId?: number,
+    currentUser?: AuthenticatedUser,
   ): Promise<RegistroMovilidades> {
-    const registro = await this.findOne(id, userId);
+    const registro = await this.findOne(id, currentUser);
 
     if (dto.tiendaId !== undefined) {
       if (dto.tiendaId) {
@@ -184,8 +272,8 @@ export class RegistroMovilidadesService {
       .finally(() => this.cacheManager.reset());
   }
 
-  async remove(id: number, userId?: number): Promise<void> {
-    const registro = await this.findOne(id, userId);
+  async remove(id: number, currentUser?: AuthenticatedUser): Promise<void> {
+    const registro = await this.findOne(id, currentUser);
     await this.registroRepository.remove(registro);
     await this.cacheManager.reset();
   }
