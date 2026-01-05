@@ -27,18 +27,13 @@ import { GastosService } from './gastos.service';
 export class GastosController {
   constructor(private readonly gastosService: GastosService) {}
 
-  private resolveUserId(user?: AuthenticatedUser, requestedUserId?: number) {
-    return user?.rol === UserRole.USER ? user.userId : requestedUserId;
-  }
-
   @Post()
   @Roles(UserRole.ADMIN, UserRole.USER)
   create(
     @Body() dto: CreateGastoDto,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user);
-    return this.gastosService.create(dto, userId);
+    return this.gastosService.create(dto, user);
   }
 
   @Get()
@@ -48,8 +43,7 @@ export class GastosController {
     @Query() query: FilterGastosDto,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user, query.userId);
-    return this.gastosService.findAll(query, userId);
+    return this.gastosService.findAll(query, user);
   }
 
   @Get(':id')
@@ -59,8 +53,7 @@ export class GastosController {
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user);
-    return this.gastosService.findOne(id, userId);
+    return this.gastosService.findOne(id, user);
   }
 
   @Patch(':id')
@@ -70,8 +63,7 @@ export class GastosController {
     @Body() dto: UpdateGastoDto,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user);
-    return this.gastosService.update(id, dto, userId);
+    return this.gastosService.update(id, dto, user);
   }
 
   @Delete(':id')
@@ -80,7 +72,6 @@ export class GastosController {
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = this.resolveUserId(user);
-    return this.gastosService.remove(id, userId);
+    return this.gastosService.remove(id, user);
   }
 }

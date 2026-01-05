@@ -8,8 +8,8 @@ import { FilterTiendasIbkDto } from '../tiendas-ibk/dto/filter-tiendas-ibk.dto';
 describe('Filter DTO validation', () => {
   it('rejects invalid dates for gastos filters', async () => {
     const instance = plainToInstance(FilterGastosDto, {
-      startDate: '2025-02-29',
-      endDate: '2025-02-29',
+      from: '2025-02-29',
+      to: '2025-02-29',
     });
     const errors = await validate(instance);
     expect(errors).not.toHaveLength(0);
@@ -17,8 +17,8 @@ describe('Filter DTO validation', () => {
 
   it('accepts valid leap day date for ingresos filters', async () => {
     const instance = plainToInstance(FilterIngresosDto, {
-      startDate: '2024-02-29',
-      endDate: '2024-02-29',
+      from: '2024-02-29',
+      to: '2024-02-29',
       page: '2',
       limit: '15',
     });
@@ -30,7 +30,7 @@ describe('Filter DTO validation', () => {
 
   it('rejects invalid dates for registro movilidades filters', async () => {
     const instance = plainToInstance(FilterRegistroMovilidadesDto, {
-      startDate: '2025-02-29',
+      from: '2025-02-29',
     });
     const errors = await validate(instance);
     expect(errors).not.toHaveLength(0);

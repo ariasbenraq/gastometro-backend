@@ -52,7 +52,10 @@ export class UsuariosService {
     dto: UpdateUsuarioDto,
     currentUser?: AuthenticatedUser,
   ) {
-    if (currentUser?.rol === UserRole.USER && currentUser.userId !== id) {
+    if (
+      currentUser?.rol !== UserRole.ADMIN &&
+      currentUser?.userId !== id
+    ) {
       throw new ForbiddenException('No tiene permisos para actualizar este perfil.');
     }
 

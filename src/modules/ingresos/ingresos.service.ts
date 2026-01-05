@@ -11,6 +11,7 @@ import { Repository } from 'typeorm';
 import { Ingreso } from '../../entities/ingreso.entity';
 import { PersonalAdministrativo } from '../../entities/personal-administrativo.entity';
 import { Usuario } from '../../entities/usuario.entity';
+import { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../auth/dto/signup.dto';
 import { CreateIngresoDto } from './dto/create-ingreso.dto';
 import { FilterIngresosDto } from './dto/filter-ingresos.dto';
@@ -29,12 +30,84 @@ export class IngresosService {
     private readonly cacheManager: Cache,
   ) {}
 
-  async create(dto: CreateIngresoDto, userId?: number): Promise<Ingreso> {
-    if (!userId) {
+  private formatDate(date: Date) {
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private resolveTargetUserId(
+    currentUser?: AuthenticatedUser,
+    requestedUserId?: number,
+  ) {
+    if (currentUser?.rol === UserRole.USER) {
+      return currentUser.userId;
+    }
+
+    if (!requestedUserId) {
       throw new BadRequestException(
         'Debe especificar el usuario para registrar el ingreso.',
       );
     }
+
+    return requestedUserId;
+  }
+
+  private resolveFilterUserId(
+    currentUser?: AuthenticatedUser,
+    requestedUserId?: number,
+  ) {
+    if (currentUser?.rol === UserRole.USER) {
+      return currentUser.userId;
+    }
+    return requestedUserId;
+  }
+
+  private resolveOwnershipUserId(currentUser?: AuthenticatedUser) {
+    if (currentUser?.rol === UserRole.USER) {
+      return currentUser.userId;
+    }
+    return undefined;
+  }
+
+  private resolveDateRange(filters?: FilterIngresosDto) {
+    if (!filters) {
+      return {};
+    }
+
+    if (filters.from || filters.to) {
+      return { startDate: filters.from, endDate: filters.to };
+    }
+
+    if (filters.month !== undefined) {
+      if (!filters.year) {
+        throw new BadRequestException(
+          'El año es obligatorio cuando se especifica el mes.',
+        );
+      }
+      const start = new Date(Date.UTC(filters.year, filters.month - 1, 1));
+      const end = new Date(Date.UTC(filters.year, filters.month, 0));
+      return {
+        startDate: this.formatDate(start),
+        endDate: this.formatDate(end),
+      };
+    }
+
+    if (filters.year) {
+      const start = new Date(Date.UTC(filters.year, 0, 1));
+      const end = new Date(Date.UTC(filters.year, 11, 31));
+      return {
+        startDate: this.formatDate(start),
+        endDate: this.formatDate(end),
+      };
+    }
+
+    return {};
+  }
+
+  async create(dto: CreateIngresoDto, currentUser?: AuthenticatedUser): Promise<Ingreso> {
+    const userId = this.resolveTargetUserId(currentUser, dto.usuarioId);
 
     const usuario = await this.usuariosRepository.findOne({
       where: { id: userId },
@@ -43,12 +116,6 @@ export class IngresosService {
 
     if (!usuario) {
       throw new NotFoundException(`Usuario ${userId} no encontrado`);
-    }
-
-    if (usuario.rol?.nombre !== UserRole.USER) {
-      throw new BadRequestException(
-        'El ingreso solo puede asignarse a usuarios con rol USER.',
-      );
     }
 
     const ingreso = this.ingresosRepository.create({
@@ -72,11 +139,13 @@ export class IngresosService {
 
   async findAll(
     filters?: FilterIngresosDto,
-    userId?: number,
+    currentUser?: AuthenticatedUser,
   ): Promise<{
     data: Ingreso[];
     meta: { total: number; page: number; limit: number };
   }> {
+    const userId = this.resolveFilterUserId(currentUser, filters?.userId);
+    const { startDate, endDate } = this.resolveDateRange(filters);
     const query = this.ingresosRepository
       .createQueryBuilder('ingreso')
       .leftJoin('ingreso.depositadoPor', 'depositadoPor')
@@ -95,20 +164,20 @@ export class IngresosService {
       hasWhere = true;
     }
 
-    if (filters?.startDate && filters?.endDate) {
+    if (startDate && endDate) {
       const method = hasWhere ? 'andWhere' : 'where';
       query[method]('ingreso.fecha BETWEEN :start AND :end', {
-        start: filters.startDate,
-        end: filters.endDate,
+        start: startDate,
+        end: endDate,
       });
       hasWhere = true;
-    } else if (filters?.startDate) {
+    } else if (startDate) {
       const method = hasWhere ? 'andWhere' : 'where';
-      query[method]('ingreso.fecha >= :start', { start: filters.startDate });
+      query[method]('ingreso.fecha >= :start', { start: startDate });
       hasWhere = true;
-    } else if (filters?.endDate) {
+    } else if (endDate) {
       const method = hasWhere ? 'andWhere' : 'where';
-      query[method]('ingreso.fecha <= :end', { end: filters.endDate });
+      query[method]('ingreso.fecha <= :end', { end: endDate });
       hasWhere = true;
     }
 
@@ -141,7 +210,8 @@ export class IngresosService {
     };
   }
 
-  async findOne(id: number, userId?: number): Promise<Ingreso> {
+  async findOne(id: number, currentUser?: AuthenticatedUser): Promise<Ingreso> {
+    const userId = this.resolveOwnershipUserId(currentUser);
     const whereClause = userId
       ? { id, usuario: { id: userId } }
       : { id };
@@ -160,9 +230,9 @@ export class IngresosService {
   async update(
     id: number,
     dto: UpdateIngresoDto,
-    userId?: number,
+    currentUser?: AuthenticatedUser,
   ): Promise<Ingreso> {
-    const ingreso = await this.findOne(id, userId);
+    const ingreso = await this.findOne(id, currentUser);
 
     if (dto.depositadoPorId !== undefined) {
       if (dto.depositadoPorId) {
@@ -185,8 +255,8 @@ export class IngresosService {
       .finally(() => this.cacheManager.reset());
   }
 
-  async remove(id: number, userId?: number): Promise<void> {
-    const ingreso = await this.findOne(id, userId);
+  async remove(id: number, currentUser?: AuthenticatedUser): Promise<void> {
+    const ingreso = await this.findOne(id, currentUser);
     await this.ingresosRepository.remove(ingreso);
     await this.cacheManager.reset();
   }

@@ -1,4 +1,13 @@
-import { IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsDateString,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class CreateRegistroMovilidadesDto {
   @IsDateString()
@@ -26,6 +35,12 @@ export class CreateRegistroMovilidadesDto {
   @IsOptional()
   @IsNumber()
   tiendaId?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  userId?: number;
 
   @IsString()
   @IsNotEmpty()

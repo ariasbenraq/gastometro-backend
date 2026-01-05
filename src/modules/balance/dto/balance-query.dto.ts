@@ -3,13 +3,12 @@ import {
   IsDateString,
   IsInt,
   IsOptional,
-  IsString,
   Max,
   Min,
   ValidateIf,
 } from 'class-validator';
 
-export class FilterIngresosDto {
+export class BalanceQueryDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -36,20 +35,4 @@ export class FilterIngresosDto {
   @IsInt()
   @Min(1)
   year?: number;
-
-  @IsOptional()
-  @IsString()
-  q?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page?: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  limit?: number;
 }

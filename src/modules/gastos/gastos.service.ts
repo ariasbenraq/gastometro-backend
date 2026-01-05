@@ -1,11 +1,18 @@
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';
 import { Repository } from 'typeorm';
 import { Gasto } from '../../entities/gasto.entity';
 import { PersonalAdministrativo } from '../../entities/personal-administrativo.entity';
 import { Usuario } from '../../entities/usuario.entity';
+import { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
+import { UserRole } from '../auth/dto/signup.dto';
 import { CreateGastoDto } from './dto/create-gasto.dto';
 import { FilterGastosDto } from './dto/filter-gastos.dto';
 import { UpdateGastoDto } from './dto/update-gasto.dto';
@@ -21,7 +28,84 @@ export class GastosService {
     private readonly cacheManager: Cache,
   ) {}
 
-  async create(dto: CreateGastoDto, userId?: number): Promise<Gasto> {
+  private formatDate(date: Date) {
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private resolveTargetUserId(
+    currentUser?: AuthenticatedUser,
+    requestedUserId?: number,
+  ) {
+    if (currentUser?.rol === UserRole.USER) {
+      return currentUser.userId;
+    }
+
+    if (!requestedUserId) {
+      throw new BadRequestException(
+        'Debe especificar el usuario para registrar el gasto.',
+      );
+    }
+
+    return requestedUserId;
+  }
+
+  private resolveFilterUserId(
+    currentUser?: AuthenticatedUser,
+    requestedUserId?: number,
+  ) {
+    if (currentUser?.rol === UserRole.USER) {
+      return currentUser.userId;
+    }
+    return requestedUserId;
+  }
+
+  private resolveOwnershipUserId(currentUser?: AuthenticatedUser) {
+    if (currentUser?.rol === UserRole.USER) {
+      return currentUser.userId;
+    }
+    return undefined;
+  }
+
+  private resolveDateRange(filters?: FilterGastosDto) {
+    if (!filters) {
+      return {};
+    }
+
+    if (filters.from || filters.to) {
+      return { startDate: filters.from, endDate: filters.to };
+    }
+
+    if (filters.month !== undefined) {
+      if (!filters.year) {
+        throw new BadRequestException(
+          'El año es obligatorio cuando se especifica el mes.',
+        );
+      }
+      const start = new Date(Date.UTC(filters.year, filters.month - 1, 1));
+      const end = new Date(Date.UTC(filters.year, filters.month, 0));
+      return {
+        startDate: this.formatDate(start),
+        endDate: this.formatDate(end),
+      };
+    }
+
+    if (filters.year) {
+      const start = new Date(Date.UTC(filters.year, 0, 1));
+      const end = new Date(Date.UTC(filters.year, 11, 31));
+      return {
+        startDate: this.formatDate(start),
+        endDate: this.formatDate(end),
+      };
+    }
+
+    return {};
+  }
+
+  async create(dto: CreateGastoDto, currentUser?: AuthenticatedUser): Promise<Gasto> {
+    const userId = this.resolveTargetUserId(currentUser, dto.userId);
     const gasto = this.gastosRepository.create({
       fecha: dto.fecha,
       item: dto.item,
@@ -29,9 +113,7 @@ export class GastosService {
       monto: dto.monto,
     });
 
-    if (userId) {
-      gasto.usuario = { id: userId } as Usuario;
-    }
+    gasto.usuario = { id: userId } as Usuario;
 
     if (dto.aprobadoPorId) {
       const aprobadoPor = await this.personalRepository.findOne({
@@ -47,8 +129,10 @@ export class GastosService {
 
   async findAll(
     filters?: FilterGastosDto,
-    userId?: number,
+    currentUser?: AuthenticatedUser,
   ): Promise<{ data: Gasto[]; meta: { total: number; page: number; limit: number } }> {
+    const userId = this.resolveFilterUserId(currentUser, filters?.userId);
+    const { startDate, endDate } = this.resolveDateRange(filters);
     const query = this.gastosRepository
       .createQueryBuilder('gasto')
       .leftJoin('gasto.aprobadoPor', 'aprobadoPor')
@@ -69,20 +153,20 @@ export class GastosService {
       hasWhere = true;
     }
 
-    if (filters?.startDate && filters?.endDate) {
+    if (startDate && endDate) {
       const method = hasWhere ? 'andWhere' : 'where';
       query[method]('gasto.fecha BETWEEN :start AND :end', {
-        start: filters.startDate,
-        end: filters.endDate,
+        start: startDate,
+        end: endDate,
       });
       hasWhere = true;
-    } else if (filters?.startDate) {
+    } else if (startDate) {
       const method = hasWhere ? 'andWhere' : 'where';
-      query[method]('gasto.fecha >= :start', { start: filters.startDate });
+      query[method]('gasto.fecha >= :start', { start: startDate });
       hasWhere = true;
-    } else if (filters?.endDate) {
+    } else if (endDate) {
       const method = hasWhere ? 'andWhere' : 'where';
-      query[method]('gasto.fecha <= :end', { end: filters.endDate });
+      query[method]('gasto.fecha <= :end', { end: endDate });
       hasWhere = true;
     }
 
@@ -118,7 +202,8 @@ export class GastosService {
     };
   }
 
-  async findOne(id: number, userId?: number): Promise<Gasto> {
+  async findOne(id: number, currentUser?: AuthenticatedUser): Promise<Gasto> {
+    const userId = this.resolveOwnershipUserId(currentUser);
     const whereClause = userId
       ? { id, usuario: { id: userId } }
       : { id };
@@ -134,8 +219,12 @@ export class GastosService {
     return gasto;
   }
 
-  async update(id: number, dto: UpdateGastoDto, userId?: number): Promise<Gasto> {
-    const gasto = await this.findOne(id, userId);
+  async update(
+    id: number,
+    dto: UpdateGastoDto,
+    currentUser?: AuthenticatedUser,
+  ): Promise<Gasto> {
+    const gasto = await this.findOne(id, currentUser);
 
     if (dto.aprobadoPorId !== undefined) {
       if (dto.aprobadoPorId) {
@@ -160,8 +249,8 @@ export class GastosService {
       .finally(() => this.cacheManager.reset());
   }
 
-  async remove(id: number, userId?: number): Promise<void> {
-    const gasto = await this.findOne(id, userId);
+  async remove(id: number, currentUser?: AuthenticatedUser): Promise<void> {
+    const gasto = await this.findOne(id, currentUser);
     await this.gastosRepository.remove(gasto);
     await this.cacheManager.reset();
   }
