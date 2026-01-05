@@ -36,10 +36,10 @@
     "pg": "^8.12.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "typeorm": "^0.3.20"
+    "typeorm": "^0.3.20",
+    "@nestjs/cli": "^10.3.2"
   },
   "devDependencies": {
-    "@nestjs/cli": "^10.3.2",
     "@nestjs/schematics": "^10.1.2",
     "@nestjs/testing": "^10.3.9",
     "@types/bcryptjs": "^2.4.6",
