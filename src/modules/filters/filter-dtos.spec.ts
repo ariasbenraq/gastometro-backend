@@ -3,7 +3,7 @@ import { validate } from 'class-validator';
 import { FilterGastosDto } from '../gastos/dto/filter-gastos.dto';
 import { FilterIngresosDto } from '../ingresos/dto/filter-ingresos.dto';
 import { FilterRegistroMovilidadesDto } from '../registro-movilidades/dto/filter-registro-movilidades.dto';
-import { FilterTiendasIbkDto } from '../tiendas-ibk/dto/filter-tiendas-ibk.dto';
+import { FilterClientesDto } from '../clientes/dto/filter-clientes.dto';
 
 describe('Filter DTO validation', () => {
   it('rejects invalid dates for gastos filters', async () => {
@@ -36,16 +36,15 @@ describe('Filter DTO validation', () => {
     expect(errors).not.toHaveLength(0);
   });
 
-  it('casts and validates estadoServicioId for tiendas filters', async () => {
-    const instance = plainToInstance(FilterTiendasIbkDto, {
-      estadoServicioId: '2',
-      q: 'Miraflores',
+  it('casts and validates clientes filters', async () => {
+    const instance = plainToInstance(FilterClientesDto, {
+      tipo: 'Banco',
+      q: 'BCP',
       page: '1',
       limit: '25',
     });
     const errors = await validate(instance);
     expect(errors).toHaveLength(0);
-    expect(instance.estadoServicioId).toBe(2);
     expect(instance.page).toBe(1);
     expect(instance.limit).toBe(25);
   });

@@ -3,8 +3,9 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';
 import { Repository } from 'typeorm';
+import { DistritoLima } from '../../entities/distrito-lima.entity';
+import { EntidadFinanciera } from '../../entities/entidad-financiera.entity';
 import { RegistroMovilidades } from '../../entities/registro-movilidades.entity';
-import { TiendaIbk } from '../../entities/tienda-ibk.entity';
 import { Usuario } from '../../entities/usuario.entity';
 import { CreateRegistroMovilidadesDto } from './dto/create-registro-movilidades.dto';
 import { FilterRegistroMovilidadesDto } from './dto/filter-registro-movilidades.dto';
@@ -15,8 +16,10 @@ export class RegistroMovilidadesService {
   constructor(
     @InjectRepository(RegistroMovilidades)
     private readonly registroRepository: Repository<RegistroMovilidades>,
-    @InjectRepository(TiendaIbk)
-    private readonly tiendaRepository: Repository<TiendaIbk>,
+    @InjectRepository(DistritoLima)
+    private readonly distritoRepository: Repository<DistritoLima>,
+    @InjectRepository(EntidadFinanciera)
+    private readonly clienteRepository: Repository<EntidadFinanciera>,
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
   ) {}
@@ -27,23 +30,40 @@ export class RegistroMovilidadesService {
   ): Promise<RegistroMovilidades> {
     const registro = this.registroRepository.create({
       fecha: dto.fecha,
-      inicio: dto.inicio,
-      fin: dto.fin,
       motivo: dto.motivo,
       detalle: dto.detalle,
       monto: dto.monto,
-      ticket: dto.ticket,
+      wo: dto.wo,
     });
     if (userId) {
       registro.usuario = { id: userId } as Usuario;
     }
 
-    if (dto.tiendaId) {
-      const tienda = await this.tiendaRepository.findOne({
-        where: { id: dto.tiendaId },
-      });
-      registro.tienda = tienda ?? undefined;
+    const [inicioDistrito, finDistrito, cliente] = await Promise.all([
+      this.distritoRepository.findOne({ where: { id: dto.inicioId } }),
+      this.distritoRepository.findOne({ where: { id: dto.finId } }),
+      this.clienteRepository.findOne({ where: { id: dto.clienteId } }),
+    ]);
+
+    if (!inicioDistrito) {
+      throw new NotFoundException(
+        `Distrito de inicio ${dto.inicioId} no encontrado`,
+      );
     }
+
+    if (!finDistrito) {
+      throw new NotFoundException(
+        `Distrito de fin ${dto.finId} no encontrado`,
+      );
+    }
+
+    if (!cliente) {
+      throw new NotFoundException(`Cliente ${dto.clienteId} no encontrado`);
+    }
+
+    registro.inicio = inicioDistrito;
+    registro.fin = finDistrito;
+    registro.cliente = cliente;
 
     return this.registroRepository
       .save(registro)
@@ -59,19 +79,23 @@ export class RegistroMovilidadesService {
   }> {
     const query = this.registroRepository
       .createQueryBuilder('registro')
-      .leftJoin('registro.tienda', 'tienda')
+      .leftJoin('registro.inicio', 'inicio')
+      .leftJoin('registro.fin', 'fin')
+      .leftJoin('registro.cliente', 'cliente')
       .select([
         'registro.id',
         'registro.fecha',
-        'registro.inicio',
-        'registro.fin',
         'registro.motivo',
         'registro.detalle',
         'registro.monto',
-        'registro.ticket',
-        'tienda.id',
-        'tienda.codigo_tienda',
-        'tienda.nombre_tienda',
+        'registro.wo',
+        'inicio.id',
+        'inicio.nombre',
+        'fin.id',
+        'fin.nombre',
+        'cliente.id',
+        'cliente.nombre',
+        'cliente.tipo',
       ])
       .orderBy('registro.fecha', 'DESC');
     let hasWhere = false;
@@ -102,12 +126,12 @@ export class RegistroMovilidadesService {
       const keyword = `%${filters.q.trim()}%`;
       const method = hasWhere ? 'andWhere' : 'where';
       query[method](
-        `(registro.inicio ILIKE :keyword
-          OR registro.fin ILIKE :keyword
+        `(inicio.nombre ILIKE :keyword
+          OR fin.nombre ILIKE :keyword
           OR registro.motivo ILIKE :keyword
           OR registro.detalle ILIKE :keyword
-          OR registro.ticket ILIKE :keyword
-          OR tienda.nombre_tienda ILIKE :keyword)`,
+          OR registro.wo ILIKE :keyword
+          OR cliente.nombre ILIKE :keyword)`,
         { keyword },
       );
       hasWhere = true;
@@ -141,7 +165,7 @@ export class RegistroMovilidadesService {
       : { id };
     const registro = await this.registroRepository.findOne({
       where: whereClause,
-      relations: ['tienda'],
+      relations: ['inicio', 'fin', 'cliente'],
     });
 
     if (!registro) {
@@ -158,25 +182,46 @@ export class RegistroMovilidadesService {
   ): Promise<RegistroMovilidades> {
     const registro = await this.findOne(id, userId);
 
-    if (dto.tiendaId !== undefined) {
-      if (dto.tiendaId) {
-        const tienda = await this.tiendaRepository.findOne({
-          where: { id: dto.tiendaId },
-        });
-        registro.tienda = tienda ?? undefined;
-      } else {
-        registro.tienda = undefined;
+    if (dto.inicioId !== undefined) {
+      const inicioDistrito = await this.distritoRepository.findOne({
+        where: { id: dto.inicioId },
+      });
+      if (!inicioDistrito) {
+        throw new NotFoundException(
+          `Distrito de inicio ${dto.inicioId} no encontrado`,
+        );
       }
+      registro.inicio = inicioDistrito;
+    }
+
+    if (dto.finId !== undefined) {
+      const finDistrito = await this.distritoRepository.findOne({
+        where: { id: dto.finId },
+      });
+      if (!finDistrito) {
+        throw new NotFoundException(
+          `Distrito de fin ${dto.finId} no encontrado`,
+        );
+      }
+      registro.fin = finDistrito;
+    }
+
+    if (dto.clienteId !== undefined) {
+      const cliente = await this.clienteRepository.findOne({
+        where: { id: dto.clienteId },
+      });
+      if (!cliente) {
+        throw new NotFoundException(`Cliente ${dto.clienteId} no encontrado`);
+      }
+      registro.cliente = cliente;
     }
 
     Object.assign(registro, {
       fecha: dto.fecha ?? registro.fecha,
-      inicio: dto.inicio ?? registro.inicio,
-      fin: dto.fin ?? registro.fin,
       motivo: dto.motivo ?? registro.motivo,
       detalle: dto.detalle ?? registro.detalle,
       monto: dto.monto ?? registro.monto,
-      ticket: dto.ticket ?? registro.ticket,
+      wo: dto.wo ?? registro.wo,
     });
 
     return this.registroRepository

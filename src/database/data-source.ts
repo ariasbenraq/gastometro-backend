@@ -1,5 +1,6 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
-import { EstadoServicio } from '../entities/estado-servicio.entity';
+import { DistritoLima } from '../entities/distrito-lima.entity';
+import { EntidadFinanciera } from '../entities/entidad-financiera.entity';
 import { Gasto } from '../entities/gasto.entity';
 import { Ingreso } from '../entities/ingreso.entity';
 import { PersonalAdministrativo } from '../entities/personal-administrativo.entity';
@@ -7,7 +8,6 @@ import { PasswordResetToken } from '../entities/password-reset-token.entity';
 import { RegistroMovilidades } from '../entities/registro-movilidades.entity';
 import { RefreshToken } from '../entities/refresh-token.entity';
 import { RolesUsuario } from '../entities/roles-usuario.entity';
-import { TiendaIbk } from '../entities/tienda-ibk.entity';
 import { Usuario } from '../entities/usuario.entity';
 
 export const dataSourceOptions: DataSourceOptions = {
@@ -29,8 +29,8 @@ export const dataSourceOptions: DataSourceOptions = {
     Ingreso,
     RegistroMovilidades,
     PersonalAdministrativo,
-    TiendaIbk,
-    EstadoServicio,
+    DistritoLima,
+    EntidadFinanciera,
     RolesUsuario,
     Usuario,
     RefreshToken,
