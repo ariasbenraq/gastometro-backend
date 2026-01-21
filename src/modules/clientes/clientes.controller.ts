@@ -11,6 +11,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/dto/signup.dto';
 import { ClientesService } from './clientes.service';
@@ -18,6 +19,8 @@ import { CreateClienteDto } from './dto/create-cliente.dto';
 import { FilterClientesDto } from './dto/filter-clientes.dto';
 import { UpdateClienteDto } from './dto/update-cliente.dto';
 
+@ApiTags('clientes')
+@ApiBearerAuth()
 @Controller('clientes')
 @UseInterceptors(CacheInterceptor)
 @Roles(UserRole.ADMIN)

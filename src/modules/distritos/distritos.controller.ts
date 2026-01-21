@@ -11,6 +11,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/dto/signup.dto';
 import { CreateDistritoDto } from './dto/create-distrito.dto';
@@ -18,6 +19,8 @@ import { FilterDistritosDto } from './dto/filter-distritos.dto';
 import { UpdateDistritoDto } from './dto/update-distrito.dto';
 import { DistritosService } from './distritos.service';
 
+@ApiTags('distritos')
+@ApiBearerAuth()
 @Controller('distritos')
 @UseInterceptors(CacheInterceptor)
 export class DistritosController {
