@@ -16,6 +16,8 @@ import { RolesGuard } from './modules/auth/guards/roles.guard';
 import { HealthModule } from './health/health.module';
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
 import { ClientesModule } from './modules/clientes/clientes.module';
+import { DistritosModule } from './modules/distritos/distritos.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 const validationSchema = Joi.object({
   DB_HOST: Joi.string().default('192.168.18.10'),
@@ -67,6 +69,8 @@ const validationSchema = Joi.object({
     HealthModule,
     UsuariosModule,
     ClientesModule,
+    DistritosModule,
+    DashboardModule,
   ],
   providers: [
     {

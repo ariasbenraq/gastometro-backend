@@ -11,6 +11,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   AuthenticatedUser,
   CurrentUser,
@@ -22,6 +23,8 @@ import { FilterRegistroMovilidadesDto } from './dto/filter-registro-movilidades.
 import { UpdateRegistroMovilidadesDto } from './dto/update-registro-movilidades.dto';
 import { RegistroMovilidadesService } from './registro-movilidades.service';
 
+@ApiTags('registro-movilidades')
+@ApiBearerAuth()
 @Controller('registro-movilidades')
 @UseInterceptors(CacheInterceptor)
 export class RegistroMovilidadesController {
