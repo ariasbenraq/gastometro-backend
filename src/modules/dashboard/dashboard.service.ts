@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Gasto } from '../../entities/gasto.entity';
-import { RegistroMovilidades } from '../../entities/registro-movilidades.entity';
 import { BalanceService } from '../balance/balance.service';
 import { DashboardSummaryQueryDto } from './dto/dashboard-summary-query.dto';
 import {
@@ -17,8 +16,6 @@ export class DashboardService {
   constructor(
     @InjectRepository(Gasto)
     private readonly gastosRepository: Repository<Gasto>,
-    @InjectRepository(RegistroMovilidades)
-    private readonly movilidadesRepository: Repository<RegistroMovilidades>,
     private readonly balanceService: BalanceService,
     private readonly dataSource: DataSource,
   ) {}

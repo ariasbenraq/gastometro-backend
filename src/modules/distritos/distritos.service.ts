@@ -21,7 +21,7 @@ export class DistritosService {
     const distrito = this.distritosRepository.create({
       nombre: dto.nombre,
       ubigeo: dto.ubigeo,
-      codigo_postal_ref: dto.codigo_postal_ref ?? null,
+      codigo_postal_ref: dto.codigo_postal_ref ?? undefined,
     });
 
     return this.distritosRepository

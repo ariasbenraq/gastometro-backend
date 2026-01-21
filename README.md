@@ -1,11 +1,5 @@
 # gastometro-backend
 
-## Documentación OpenAPI
-
-Al iniciar el servidor, la documentación OpenAPI/Swagger queda disponible en:
-
-- `http://localhost:4000/docs`
-
 ## Usuario admin inicial
 
 La migración `1723000000000-seed-admin-role-user.ts` inserta los roles
