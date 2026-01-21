@@ -1,15 +1,14 @@
-import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 
-export class FilterTiendasIbkDto {
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  estadoServicioId?: number;
-
+export class FilterClientesDto {
   @IsOptional()
   @IsString()
   q?: string;
+
+  @IsOptional()
+  @IsString()
+  tipo?: string;
 
   @IsOptional()
   @Type(() => Number)

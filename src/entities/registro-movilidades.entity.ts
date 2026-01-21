@@ -6,7 +6,8 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { TiendaIbk } from './tienda-ibk.entity';
+import { DistritoLima } from './distrito-lima.entity';
+import { EntidadFinanciera } from './entidad-financiera.entity';
 import { Usuario } from './usuario.entity';
 
 @Entity({ name: 'registro_movilidades' })
@@ -17,11 +18,13 @@ export class RegistroMovilidades {
   @Column({ type: 'date' })
   fecha: string;
 
-  @Column({ type: 'varchar', length: 120 })
-  inicio: string;
+  @ManyToOne(() => DistritoLima, { nullable: false })
+  @JoinColumn({ name: 'inicio_id' })
+  inicio: DistritoLima;
 
-  @Column({ type: 'varchar', length: 120 })
-  fin: string;
+  @ManyToOne(() => DistritoLima, { nullable: false })
+  @JoinColumn({ name: 'fin_id' })
+  fin: DistritoLima;
 
   @Column({ type: 'varchar', length: 250 })
   motivo: string;
@@ -36,14 +39,12 @@ export class RegistroMovilidades {
   @JoinColumn({ name: 'usuario_id' })
   usuario: Usuario;
 
-  @ManyToOne(() => TiendaIbk, (tienda) => tienda.registrosMovilidades, {
-    nullable: true,
-  })
-  @JoinColumn({ name: 'tienda_id' })
-  tienda?: TiendaIbk;
+  @ManyToOne(() => EntidadFinanciera, { nullable: false })
+  @JoinColumn({ name: 'cliente_id' })
+  cliente: EntidadFinanciera;
 
   @Column({ type: 'varchar', length: 100 })
-  ticket: string;
+  wo: string;
 
   @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   createdAt: Date;

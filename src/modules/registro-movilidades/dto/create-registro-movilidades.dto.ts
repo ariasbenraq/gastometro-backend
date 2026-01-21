@@ -1,16 +1,19 @@
-import { IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsDateString, IsInt, IsNotEmpty, IsNumber, IsString, Min } from 'class-validator';
 
 export class CreateRegistroMovilidadesDto {
   @IsDateString()
   fecha: string;
 
-  @IsString()
-  @IsNotEmpty()
-  inicio: string;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  inicioId: number;
 
-  @IsString()
-  @IsNotEmpty()
-  fin: string;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  finId: number;
 
   @IsString()
   @IsNotEmpty()
@@ -23,11 +26,12 @@ export class CreateRegistroMovilidadesDto {
   @IsNumber()
   monto: number;
 
-  @IsOptional()
-  @IsNumber()
-  tiendaId?: number;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  clienteId: number;
 
   @IsString()
   @IsNotEmpty()
-  ticket: string;
+  wo: string;
 }
