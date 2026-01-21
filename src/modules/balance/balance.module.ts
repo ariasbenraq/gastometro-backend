@@ -10,5 +10,6 @@ import { BalanceService } from './balance.service';
   imports: [TypeOrmModule.forFeature([Ingreso, Gasto, RegistroMovilidades])],
   controllers: [BalanceController],
   providers: [BalanceService],
+  exports: [BalanceService],
 })
 export class BalanceModule {}
