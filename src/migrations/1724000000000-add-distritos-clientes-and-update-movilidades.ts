@@ -100,6 +100,67 @@ export class AddDistritosClientesAndUpdateMovilidades1724000000000
     );
 
     await queryRunner.query(
+      'ALTER TABLE "registro_movilidades" ADD COLUMN "inicio_id" integer',
+    );
+    await queryRunner.query(
+      'ALTER TABLE "registro_movilidades" ADD COLUMN "fin_id" integer',
+    );
+    await queryRunner.query(
+      'ALTER TABLE "registro_movilidades" ADD COLUMN "cliente_id" integer',
+    );
+    await queryRunner.query(
+      'ALTER TABLE "registro_movilidades" ADD COLUMN "wo" character varying(100)',
+    );
+
+    await queryRunner.query(
+      `UPDATE "registro_movilidades" rm
+        SET "inicio_id" = d."id"
+        FROM "distritos_lima" d
+        WHERE LOWER(rm."inicio") = LOWER(d."nombre")
+          AND rm."inicio_id" IS NULL`,
+    );
+    await queryRunner.query(
+      `UPDATE "registro_movilidades" rm
+        SET "fin_id" = d."id"
+        FROM "distritos_lima" d
+        WHERE LOWER(rm."fin") = LOWER(d."nombre")
+          AND rm."fin_id" IS NULL`,
+    );
+    await queryRunner.query(
+      `UPDATE "registro_movilidades"
+        SET "inicio_id" = (SELECT "id" FROM "distritos_lima" ORDER BY "id" ASC LIMIT 1)
+        WHERE "inicio_id" IS NULL`,
+    );
+    await queryRunner.query(
+      `UPDATE "registro_movilidades"
+        SET "fin_id" = (SELECT "id" FROM "distritos_lima" ORDER BY "id" ASC LIMIT 1)
+        WHERE "fin_id" IS NULL`,
+    );
+    await queryRunner.query(
+      `UPDATE "registro_movilidades"
+        SET "cliente_id" = (SELECT "id" FROM "entidades_financieras" ORDER BY "id" ASC LIMIT 1)
+        WHERE "cliente_id" IS NULL`,
+    );
+    await queryRunner.query(
+      `UPDATE "registro_movilidades"
+        SET "wo" = "ticket"
+        WHERE "wo" IS NULL`,
+    );
+
+    await queryRunner.query(
+      'ALTER TABLE "registro_movilidades" ALTER COLUMN "inicio_id" SET NOT NULL',
+    );
+    await queryRunner.query(
+      'ALTER TABLE "registro_movilidades" ALTER COLUMN "fin_id" SET NOT NULL',
+    );
+    await queryRunner.query(
+      'ALTER TABLE "registro_movilidades" ALTER COLUMN "cliente_id" SET NOT NULL',
+    );
+    await queryRunner.query(
+      'ALTER TABLE "registro_movilidades" ALTER COLUMN "wo" SET NOT NULL',
+    );
+
+    await queryRunner.query(
       'ALTER TABLE "registro_movilidades" DROP COLUMN IF EXISTS "inicio"',
     );
     await queryRunner.query(
@@ -109,20 +170,10 @@ export class AddDistritosClientesAndUpdateMovilidades1724000000000
       'ALTER TABLE "registro_movilidades" DROP COLUMN IF EXISTS "ticket"',
     );
     await queryRunner.query(
+      'ALTER TABLE "registro_movilidades" DROP CONSTRAINT IF EXISTS "FK_10d8644f0879d9e23cf15db212f"',
+    );
+    await queryRunner.query(
       'ALTER TABLE "registro_movilidades" DROP COLUMN IF EXISTS "tienda_id"',
-    );
-
-    await queryRunner.query(
-      'ALTER TABLE "registro_movilidades" ADD COLUMN "inicio_id" integer NOT NULL',
-    );
-    await queryRunner.query(
-      'ALTER TABLE "registro_movilidades" ADD COLUMN "fin_id" integer NOT NULL',
-    );
-    await queryRunner.query(
-      'ALTER TABLE "registro_movilidades" ADD COLUMN "cliente_id" integer NOT NULL',
-    );
-    await queryRunner.query(
-      'ALTER TABLE "registro_movilidades" ADD COLUMN "wo" character varying(100) NOT NULL',
     );
 
     await queryRunner.query(
