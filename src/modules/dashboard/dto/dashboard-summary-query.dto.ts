@@ -5,6 +5,12 @@ export class DashboardSummaryQueryDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
+  @Min(1)
+  userId?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   @Min(2000)
   year?: number;
 

@@ -21,7 +21,8 @@ export class DashboardController {
     @Query() query: DashboardSummaryQueryDto,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
-    const userId = user?.rol === UserRole.USER ? user.userId : undefined;
+    const userId =
+      user?.rol === UserRole.USER ? user.userId : query.userId;
     return this.dashboardService.getSummary(query, userId);
   }
 }

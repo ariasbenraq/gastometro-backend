@@ -1,13 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { Gasto } from '../../entities/gasto.entity';
 import { RegistroMovilidades } from '../../entities/registro-movilidades.entity';
 import { BalanceService } from '../balance/balance.service';
 import { DashboardSummaryQueryDto } from './dto/dashboard-summary-query.dto';
 import {
-  DashboardGastosByMonthDto,
-  DashboardLatestGastoDto,
+  DashboardLatestMovilidadDto,
+  DashboardMovilidadesByMonthDto,
   DashboardSummaryResponseDto,
   DashboardTopDistritoDto,
 } from './dto/dashboard-summary-response.dto';
@@ -15,8 +14,6 @@ import {
 @Injectable()
 export class DashboardService {
   constructor(
-    @InjectRepository(Gasto)
-    private readonly gastosRepository: Repository<Gasto>,
     @InjectRepository(RegistroMovilidades)
     private readonly movilidadesRepository: Repository<RegistroMovilidades>,
     private readonly balanceService: BalanceService,
@@ -34,12 +31,12 @@ export class DashboardService {
     const topLimit = query.topLimit ?? 5;
 
     const monthRange = this.getDateRange(year, month);
-    const [totals, latestGastos, topDistritos, gastosByMonth] =
+    const [totals, latestMovilidades, topDistritos, movilidadesByMonth] =
       await Promise.all([
         this.balanceService.getMonthlyBalance(year, month, userId),
-        this.getLatestGastos(monthRange, userId, latestLimit),
+        this.getLatestMovilidades(monthRange, userId, latestLimit),
         this.getTopDistritos(monthRange, userId, topLimit),
-        this.getGastosByMonth(year, userId),
+        this.getMovilidadesByMonth(year, userId),
       ]);
 
     return {
@@ -51,9 +48,9 @@ export class DashboardService {
         totalMovilidades: totals.totalMovilidades,
         balance: totals.balance,
       },
-      latestGastos,
+      latestMovilidades,
       topDistritos,
-      gastosByMonth,
+      movilidadesByMonth,
     };
   }
 
@@ -65,38 +62,38 @@ export class DashboardService {
     return { startDate, endDate };
   }
 
-  private async getLatestGastos(
+  private async getLatestMovilidades(
     range: { startDate: string; endDate: string },
     userId: number | undefined,
     limit: number,
-  ): Promise<DashboardLatestGastoDto[]> {
-    const query = this.gastosRepository
-      .createQueryBuilder('gasto')
+  ): Promise<DashboardLatestMovilidadDto[]> {
+    const query = this.movilidadesRepository
+      .createQueryBuilder('registro')
       .select([
-        'gasto.id',
-        'gasto.fecha',
-        'gasto.item',
-        'gasto.motivo',
-        'gasto.monto',
+        'registro.id',
+        'registro.fecha',
+        'registro.motivo',
+        'registro.detalle',
+        'registro.monto',
       ])
-      .where('gasto.fecha BETWEEN :start AND :end', {
+      .where('registro.fecha BETWEEN :start AND :end', {
         start: range.startDate,
         end: range.endDate,
       })
-      .orderBy('gasto.fecha', 'DESC')
+      .orderBy('registro.fecha', 'DESC')
       .limit(limit);
 
     if (userId) {
-      query.andWhere('gasto.usuario_id = :userId', { userId });
+      query.andWhere('registro.usuario_id = :userId', { userId });
     }
 
-    const gastos = await query.getMany();
-    return gastos.map((gasto) => ({
-      id: gasto.id,
-      fecha: gasto.fecha,
-      item: gasto.item,
-      motivo: gasto.motivo,
-      monto: gasto.monto,
+    const movilidades = await query.getMany();
+    return movilidades.map((registro) => ({
+      id: registro.id,
+      fecha: registro.fecha,
+      motivo: registro.motivo,
+      detalle: registro.detalle,
+      monto: registro.monto,
     }));
   }
 
@@ -143,25 +140,28 @@ export class DashboardService {
     }));
   }
 
-  private async getGastosByMonth(
+  private async getMovilidadesByMonth(
     year: number,
     userId: number | undefined,
-  ): Promise<DashboardGastosByMonthDto[]> {
+  ): Promise<DashboardMovilidadesByMonthDto[]> {
     const start = new Date(Date.UTC(year, 0, 1));
     const end = new Date(Date.UTC(year, 11, 31));
     const startDate = start.toISOString().slice(0, 10);
     const endDate = end.toISOString().slice(0, 10);
 
-    const query = this.gastosRepository
-      .createQueryBuilder('gasto')
-      .select('EXTRACT(MONTH FROM gasto.fecha)', 'month')
-      .addSelect('COALESCE(SUM(gasto.monto), 0)', 'total')
-      .where('gasto.fecha BETWEEN :start AND :end', { start: startDate, end: endDate })
+    const query = this.movilidadesRepository
+      .createQueryBuilder('registro')
+      .select('EXTRACT(MONTH FROM registro.fecha)', 'month')
+      .addSelect('COALESCE(SUM(registro.monto), 0)', 'total')
+      .where('registro.fecha BETWEEN :start AND :end', {
+        start: startDate,
+        end: endDate,
+      })
       .groupBy('month')
       .orderBy('month', 'ASC');
 
     if (userId) {
-      query.andWhere('gasto.usuario_id = :userId', { userId });
+      query.andWhere('registro.usuario_id = :userId', { userId });
     }
 
     const rows = await query.getRawMany<{ month: string; total: string }>();

@@ -4,16 +4,16 @@ export class DashboardTopDistritoDto {
   total: number;
 }
 
-export class DashboardGastosByMonthDto {
+export class DashboardMovilidadesByMonthDto {
   month: number;
   total: number;
 }
 
-export class DashboardLatestGastoDto {
+export class DashboardLatestMovilidadDto {
   id: number;
   fecha: string;
-  item: string;
   motivo: string;
+  detalle: string;
   monto: number;
 }
 
@@ -26,7 +26,7 @@ export class DashboardSummaryResponseDto {
     totalMovilidades: number;
     balance: number;
   };
-  latestGastos: DashboardLatestGastoDto[];
+  latestMovilidades: DashboardLatestMovilidadDto[];
   topDistritos: DashboardTopDistritoDto[];
-  gastosByMonth: DashboardGastosByMonthDto[];
+  movilidadesByMonth: DashboardMovilidadesByMonthDto[];
 }
