@@ -12,6 +12,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   AuthenticatedUser,
   CurrentUser,
@@ -23,6 +24,8 @@ import { FilterIngresosDto } from './dto/filter-ingresos.dto';
 import { UpdateIngresoDto } from './dto/update-ingreso.dto';
 import { IngresosService } from './ingresos.service';
 
+@ApiTags('ingresos')
+@ApiBearerAuth()
 @Controller('ingresos')
 @UseInterceptors(CacheInterceptor)
 export class IngresosController {

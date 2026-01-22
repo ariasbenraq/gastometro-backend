@@ -8,6 +8,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   AuthenticatedUser,
   CurrentUser,
@@ -21,6 +22,8 @@ enum BalanceDateField {
   CREATED_AT = 'createdAt',
 }
 
+@ApiTags('balance')
+@ApiBearerAuth()
 @Controller('balance')
 @UseInterceptors(CacheInterceptor)
 export class BalanceController {
